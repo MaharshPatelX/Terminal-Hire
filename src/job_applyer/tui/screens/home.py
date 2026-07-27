@@ -9,14 +9,9 @@ from textual.message import Message
 from textual.reactive import reactive
 from textual.widgets import Input, Static
 
-from job_applyer.tui.logo import LOGO_COMPACT, LOGO_SMALL, TAGLINE
+from job_applyer.tui.logo import LOGO_COMPACT, TAGLINE, welcome_logo
 from job_applyer.tui.nav import MENU_ITEMS, SCREEN_HOTKEYS
 from job_applyer.tui.screens.base import AppScreen
-
-
-def _welcome_logo(width: int) -> str:
-    # Full "TERMINAL HIRE" block needs ~90 cols; fall back on narrow terminals.
-    return LOGO_SMALL if width >= 92 else LOGO_COMPACT
 
 
 class MenuSelect(Message):
@@ -65,30 +60,34 @@ class WelcomeScreen(AppScreen):
                 for sid, label, shortcut in MENU_ITEMS:
                     yield MenuRow(sid, label, shortcut, id=f"menu-{sid}")
             yield Input(
-                placeholder="Type a command or press 1–6…  (/help)",
+                placeholder="Type a command or press 1-6... (/help)",
                 id="welcome-prompt",
             )
             yield Static(
-                "[dim]↑↓ select  ·  enter open  ·  esc home  ·  ctrl+q quit[/]",
+                "[dim]up/down select  |  enter open  |  esc home  |  ctrl+q quit[/]",
                 id="welcome-hint",
             )
 
     def on_mount(self) -> None:
         super().on_mount()
         self._sync_selection()
-        logo = self.query_one("#logo", Static)
-        logo.update(_welcome_logo(self.size.width or 80))
+        self._refresh_logo()
         prompt = self.query_one("#welcome-prompt", Input)
         prompt.can_focus = False
         if self.focused is prompt:
             self.set_focus(None)
 
     def on_resize(self) -> None:
+        self._refresh_logo()
+
+    def _refresh_logo(self) -> None:
         try:
             logo = self.query_one("#logo", Static)
         except Exception:
             return
-        logo.update(_welcome_logo(self.size.width or 80))
+        # Prefer app size (full terminal); screen width can be wrong mid-layout.
+        width = self.app.size.width if self.app.size.width else (self.size.width or 80)
+        logo.update(welcome_logo(width))
 
     def on_click(self, event) -> None:  # noqa: ANN001
         # Clicking the prompt enables focus (Grok: click to type)
