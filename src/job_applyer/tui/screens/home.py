@@ -1,22 +1,24 @@
-"""Welcome / Home — Grok Build–style: logo → menu → prompt."""
+"""Welcome / Home — Grok Build–style hero box + prompt."""
 
 from __future__ import annotations
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Vertical
+from textual.containers import Horizontal, Vertical
 from textual.message import Message
 from textual.reactive import reactive
+from textual.screen import Screen
 from textual.widgets import Input, Static
 
-from job_applyer.tui.logo import LOGO_COMPACT, LOGO_SMALL, TAGLINE
+from job_applyer import __version__
+from job_applyer.tui.logo import (
+    BRAND,
+    HERO_BLURB,
+    HERO_LOGO,
+    TIP,
+    hero_title_line,
+)
 from job_applyer.tui.nav import MENU_ITEMS, SCREEN_HOTKEYS
-from job_applyer.tui.screens.base import AppScreen
-
-
-def _welcome_logo(width: int) -> str:
-    # Full "TERMINAL HIRE" block needs ~90 cols; fall back on narrow terminals.
-    return LOGO_SMALL if width >= 92 else LOGO_COMPACT
 
 
 class MenuSelect(Message):
@@ -28,7 +30,7 @@ class MenuSelect(Message):
 
 
 class MenuRow(Static):
-    """One Grok-style menu row: label … shortcut."""
+    """Grok-style menu row: label left, shortcut right."""
 
     def __init__(self, screen_id: str, label: str, shortcut: str, **kwargs) -> None:
         super().__init__(classes="menu-row", **kwargs)
@@ -37,17 +39,18 @@ class MenuRow(Static):
         self._shortcut = shortcut
 
     def on_mount(self) -> None:
-        pad = max(2, 36 - len(self._label))
         self.update(
-            f"[bold]{self._label}[/]{' ' * pad}[dim]{self._shortcut}[/]"
+            f"[bold]{self._label}[/]"
+            f"{' ' * max(2, 28 - len(self._label))}"
+            f"[dim]{self._shortcut}[/]"
         )
 
     def on_click(self) -> None:
         self.post_message(MenuSelect(self.screen_id))
 
 
-class WelcomeScreen(AppScreen):
-    """First screen — logo, shortcut menu, prompt (Grok welcome pattern)."""
+class WelcomeScreen(Screen):
+    """Grok-like welcome: centered hero (logo | title+menu) + tip + prompt."""
 
     BINDINGS = [
         Binding("up", "menu_up", "Up", show=False),
@@ -57,41 +60,33 @@ class WelcomeScreen(AppScreen):
 
     selected: reactive[int] = reactive(0)
 
-    def body(self) -> ComposeResult:
-        with Vertical(id="welcome-wrap"):
-            yield Static(LOGO_COMPACT, id="logo")
-            yield Static(TAGLINE, id="tagline")
-            with Vertical(id="menu"):
-                for sid, label, shortcut in MENU_ITEMS:
-                    yield MenuRow(sid, label, shortcut, id=f"menu-{sid}")
-            yield Input(
-                placeholder="Type a command or press 1–6…  (/help)",
-                id="welcome-prompt",
-            )
+    def compose(self) -> ComposeResult:
+        with Vertical(id="welcome-stack"):
+            with Horizontal(id="hero-box"):
+                yield Static(HERO_LOGO, id="hero-logo")
+                with Vertical(id="hero-right"):
+                    yield Static(hero_title_line(), id="hero-title", markup=True)
+                    yield Static(HERO_BLURB, id="hero-blurb")
+                    with Vertical(id="menu"):
+                        for sid, label, shortcut in MENU_ITEMS:
+                            yield MenuRow(sid, label, shortcut, id=f"menu-{sid}")
+            yield Static(TIP, id="welcome-tip")
+            yield Input(placeholder="", id="welcome-prompt")
             yield Static(
-                "[dim]↑↓ select  ·  enter open  ·  esc home  ·  ctrl+q quit[/]",
-                id="welcome-hint",
+                f"[dim]{BRAND}[/]                                    "
+                f"[dim][{__version__}][/]",
+                id="welcome-foot",
             )
 
     def on_mount(self) -> None:
-        super().on_mount()
         self._sync_selection()
-        logo = self.query_one("#logo", Static)
-        logo.update(_welcome_logo(self.size.width or 80))
         prompt = self.query_one("#welcome-prompt", Input)
+        # Grok-style: prompt visible but digits still navigate until you type
+        prompt.placeholder = ">  ask or press 1-6…"
         prompt.can_focus = False
-        if self.focused is prompt:
-            self.set_focus(None)
-
-    def on_resize(self) -> None:
-        try:
-            logo = self.query_one("#logo", Static)
-        except Exception:
-            return
-        logo.update(_welcome_logo(self.size.width or 80))
+        self.set_focus(None)
 
     def on_click(self, event) -> None:  # noqa: ANN001
-        # Clicking the prompt enables focus (Grok: click to type)
         if getattr(event.widget, "id", None) == "welcome-prompt":
             prompt = self.query_one("#welcome-prompt", Input)
             prompt.can_focus = True
@@ -106,23 +101,19 @@ class WelcomeScreen(AppScreen):
             row.set_class(i == self.selected, "-selected")
 
     def action_menu_up(self) -> None:
-        prompt = self.query_one("#welcome-prompt", Input)
-        if prompt.has_focus:
+        if self.query_one("#welcome-prompt", Input).has_focus:
             return
         self.selected = (self.selected - 1) % len(MENU_ITEMS)
 
     def action_menu_down(self) -> None:
-        prompt = self.query_one("#welcome-prompt", Input)
-        if prompt.has_focus:
+        if self.query_one("#welcome-prompt", Input).has_focus:
             return
         self.selected = (self.selected + 1) % len(MENU_ITEMS)
 
     def action_menu_enter(self) -> None:
-        prompt = self.query_one("#welcome-prompt", Input)
-        if prompt.has_focus:
+        if self.query_one("#welcome-prompt", Input).has_focus:
             return
-        sid = MENU_ITEMS[self.selected][0]
-        self.post_message(MenuSelect(sid))
+        self.post_message(MenuSelect(MENU_ITEMS[self.selected][0]))
 
     def on_menu_select(self, message: MenuSelect) -> None:
         self.app.navigate(message.screen_id)

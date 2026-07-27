@@ -24,8 +24,7 @@ class TopBar(Static):
 
     def on_mount(self) -> None:
         self.update(
-            f"[bold]{BRAND}[/]  [dim]u/UI-dev[/]  [dim]·[/]  "
-            f"[dim]local[/]                  [dim]v{self._version}[/]"
+            f"[bold]{BRAND}[/]  [dim]local[/]                  [dim]v{self._version}[/]"
         )
 
 
