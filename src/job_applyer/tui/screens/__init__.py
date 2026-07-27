@@ -19,23 +19,3 @@ SCREENS = {
     "apps": AppsScreen,
     "settings": SettingsScreen,
 }
-
-# Number keys 1-6 → screens (FLOW navigation)
-SCREEN_HOTKEYS = {
-    "1": "onboard",
-    "2": "profile",
-    "3": "resume",
-    "4": "apply",
-    "5": "apps",
-    "6": "settings",
-}
-
-MENU_ITEMS: list[tuple[str, str, str]] = [
-    # (id, label, shortcut)
-    ("onboard", "Onboard", "1"),
-    ("profile", "Profile / Packs", "2"),
-    ("resume", "Resume (LaTeX → PDF)", "3"),
-    ("apply", "Apply by URL", "4"),
-    ("apps", "Applications", "5"),
-    ("settings", "Settings", "6"),
-]

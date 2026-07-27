@@ -11,7 +11,7 @@ from textual.screen import Screen
 from textual.widgets import Input, Static
 
 from job_applyer.tui.logo import LOGO_SMALL, TAGLINE
-from job_applyer.tui.screens import MENU_ITEMS
+from job_applyer.tui.nav import MENU_ITEMS, SCREEN_HOTKEYS
 
 
 class MenuSelect(Message):
@@ -114,9 +114,7 @@ class WelcomeScreen(Screen):
             self.app.handle_slash(raw)
             return
         # bare number or screen name
-        if raw in {"1", "2", "3", "4", "5", "6"}:
-            from job_applyer.tui.screens import SCREEN_HOTKEYS
-
+        if raw in SCREEN_HOTKEYS:
             self.app.navigate(SCREEN_HOTKEYS[raw])
             return
         self.app.notify(f"Unknown command: {raw}", severity="warning")
