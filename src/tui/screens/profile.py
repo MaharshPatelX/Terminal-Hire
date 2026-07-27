@@ -6,7 +6,7 @@ from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Button, Checkbox, Static
 
-from job_applyer.tui.screens.base import AppScreen
+from .base import AppScreen
 
 PACKS = [
     ("US_CITIZEN", "US citizen / work eligible"),
