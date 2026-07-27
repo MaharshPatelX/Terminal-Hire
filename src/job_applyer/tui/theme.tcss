@@ -1,33 +1,11 @@
-/* Grok Build–inspired dark TUI theme for Job Applyer */
+/* Terminal-Hire TUI — layout & chrome (colors come from Theme) */
 
-$background: #0d1117;
-$surface: #161b22;
-$panel: #1c2128;
-$boost: #21262d;
-
-$primary: #58a6ff;
-$secondary: #8b949e;
-$accent: #3fb950;
-$warning: #d29922;
-$error: #f85149;
-$success: #3fb950;
-
-$text: #e6edf3;
-$text-muted: #8b949e;
-$text-disabled: #484f58;
-
-$foreground: $text;
-
-JobApplyerApp {
+TerminalHireApp {
     background: $background;
-    color: $text;
+    color: $foreground;
 }
 
-Screen {
-    background: $background;
-}
-
-/* Top bar — repo-style location + version (Grok welcome top_bar) */
+/* Top bar — Grok welcome top_bar vibe */
 #top-bar {
     dock: top;
     height: 1;
@@ -37,20 +15,6 @@ Screen {
     padding: 0 1;
 }
 
-#top-bar .brand {
-    color: $text;
-    text-style: bold;
-}
-
-#top-bar .sep {
-    color: $text-disabled;
-}
-
-#top-bar .meta {
-    color: $text-muted;
-}
-
-/* Status strip under nav */
 #status-strip {
     dock: top;
     height: 1;
@@ -60,23 +24,6 @@ Screen {
     padding: 0 1;
 }
 
-#status-strip .ok {
-    color: $success;
-}
-
-#status-strip .warn {
-    color: $warning;
-}
-
-#status-strip .off {
-    color: $text-disabled;
-}
-
-#status-strip .key {
-    color: $primary;
-}
-
-/* Bottom hint bar */
 #footer-hints {
     dock: bottom;
     height: 1;
@@ -91,23 +38,19 @@ Screen {
     text-style: bold;
 }
 
-/* Main content */
-#main {
-    width: 100%;
-    height: 1fr;
-}
-
-/* ---- Welcome / Home (Grok-style: logo → menu → prompt) ---- */
+/* ---- Welcome / Home ---- */
 
 WelcomeScreen {
-    align: center middle;
+    layout: vertical;
 }
 
 #welcome-wrap {
-    width: 64;
+    width: 90;
     max-width: 100%;
     height: auto;
     padding: 1 2;
+    margin: 1 0;
+    align-horizontal: center;
 }
 
 #logo {
@@ -116,10 +59,6 @@ WelcomeScreen {
     color: $text-muted;
     text-align: center;
     margin-bottom: 1;
-}
-
-#logo .shine {
-    color: $text;
 }
 
 #tagline {
@@ -147,12 +86,8 @@ WelcomeScreen {
 }
 
 .menu-row .label {
-    color: $text;
+    color: $foreground;
     text-style: bold;
-}
-
-.menu-row.-selected .label {
-    color: $text;
 }
 
 .menu-row .shortcut {
@@ -184,10 +119,9 @@ WelcomeScreen {
 .screen-title {
     width: 100%;
     height: 1;
-    color: $text;
+    color: $foreground;
     text-style: bold;
     padding: 0 1;
-    margin-bottom: 0;
 }
 
 .screen-subtitle {
@@ -228,7 +162,6 @@ WelcomeScreen {
     color: $error;
 }
 
-/* Chat-style screens (Onboard / Ask) — scrollback + bottom prompt */
 .chat-log {
     height: 1fr;
     border: tall $boost;
@@ -236,20 +169,6 @@ WelcomeScreen {
     padding: 1;
     margin: 0 1;
     overflow-y: auto;
-}
-
-.chat-log .role-agent {
-    color: $primary;
-    text-style: bold;
-}
-
-.chat-log .role-user {
-    color: $accent;
-    text-style: bold;
-}
-
-.chat-log .role-system {
-    color: $text-muted;
 }
 
 #chat-input-row {
@@ -269,50 +188,25 @@ WelcomeScreen {
     border: tall $primary;
 }
 
-/* Forms */
 .form-row {
     height: auto;
     margin-bottom: 1;
 }
 
-.form-label {
-    color: $text-muted;
-    width: 18;
-}
-
-Input, TextArea {
+Input,
+TextArea {
     background: $panel;
     border: tall $boost;
-    color: $text;
+    color: $foreground;
 }
 
-Input:focus, TextArea:focus {
+Input:focus,
+TextArea:focus {
     border: tall $primary;
-}
-
-Select {
-    background: $panel;
-    border: tall $boost;
 }
 
 Button {
     margin-right: 1;
-}
-
-Button.-primary {
-    background: $primary;
-    color: $background;
-    text-style: bold;
-}
-
-Button.-success {
-    background: $success;
-    color: $background;
-}
-
-Button.-warning {
-    background: $warning;
-    color: $background;
 }
 
 DataTable {
@@ -324,16 +218,4 @@ ListView {
     background: $surface;
     border: tall $boost;
     height: 1fr;
-}
-
-ListItem {
-    padding: 0 1;
-}
-
-ListItem:hover {
-    background: $boost;
-}
-
-ListItem.-highlighted {
-    background: $boost;
 }

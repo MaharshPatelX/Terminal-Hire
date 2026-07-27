@@ -4,14 +4,15 @@ from __future__ import annotations
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
-from textual.screen import Screen
 from textual.widgets import Button, Label, Select, Static, Switch
 
+from job_applyer.tui.screens.base import AppScreen
 
-class SettingsScreen(Screen):
+
+class SettingsScreen(AppScreen):
     """FLOW Settings: LLM_PROVIDER, models, dry-run/submit locked in MVP."""
 
-    def compose(self) -> ComposeResult:
+    def body(self) -> ComposeResult:
         yield Static("Settings", classes="screen-title")
         yield Static("LLM switch · safety · paths", classes="screen-subtitle")
 
@@ -51,9 +52,12 @@ class SettingsScreen(Screen):
         if event.select.id != "llm-provider":
             return
         provider = str(event.value)
-        strip = self.app.query_one("#status-strip")
-        strip.provider = provider  # type: ignore[attr-defined]
         self.app.settings.llm_provider = provider
+        try:
+            strip = self.query_one("#status-strip")
+            strip.provider = provider  # type: ignore[attr-defined]
+        except Exception:
+            pass
         self.app.notify(f"LLM_PROVIDER → {provider}")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -64,9 +68,7 @@ class SettingsScreen(Screen):
         if provider == "off":
             result.update("[dim]Provider is off — no endpoint to check.[/]")
             return
-        # Real health check lands with M1 llm client
         result.update(
-            f"[yellow]stub[/]  Would ping {provider} OpenAI-compatible /v1 "
-            f"(wire in M1)."
+            f"[yellow]stub[/]  Would ping {provider} OpenAI-compatible /v1 (wire in M1)."
         )
         self.app.notify("llm-check stub", severity="information")

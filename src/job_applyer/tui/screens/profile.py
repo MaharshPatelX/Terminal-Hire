@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
-from textual.screen import Screen
 from textual.widgets import Button, Checkbox, Static
 
+from job_applyer.tui.screens.base import AppScreen
 
 PACKS = [
     ("US_CITIZEN", "US citizen / work eligible"),
@@ -17,10 +17,10 @@ PACKS = [
 ]
 
 
-class ProfileScreen(Screen):
+class ProfileScreen(AppScreen):
     """Browse facts + enable/disable work-auth packs."""
 
-    def compose(self) -> ComposeResult:
+    def body(self) -> ComposeResult:
         yield Static("Profile / Packs", classes="screen-title")
         yield Static(
             "Core facts always on · packs only when you need them",
@@ -47,11 +47,13 @@ class ProfileScreen(Screen):
 
     def on_checkbox_changed(self, event: Checkbox.Changed) -> None:
         enabled = [
-            pid
-            for pid, _ in PACKS
-            if self.query_one(f"#pack-{pid}", Checkbox).value
+            pid for pid, _ in PACKS if self.query_one(f"#pack-{pid}", Checkbox).value
         ]
         packs = ",".join(enabled) if enabled else "none"
-        strip = self.app.query_one("#status-strip")
-        strip.packs = packs  # type: ignore[attr-defined]
+        self.app.enabled_packs = packs
+        try:
+            strip = self.query_one("#status-strip")
+            strip.packs = packs  # type: ignore[attr-defined]
+        except Exception:
+            pass
         self.app.notify(f"Packs: {packs}")
