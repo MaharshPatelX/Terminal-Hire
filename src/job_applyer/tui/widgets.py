@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from textual.app import ComposeResult
 from textual.reactive import reactive
 from textual.widgets import Static
+
+from job_applyer.tui.logo import BRAND
 
 
 class TopBar(Static):
@@ -23,7 +24,7 @@ class TopBar(Static):
 
     def on_mount(self) -> None:
         self.update(
-            f"[bold]job-applyer[/]  [dim]u/UI-dev[/]  [dim]·[/]  "
+            f"[bold]{BRAND}[/]  [dim]u/UI-dev[/]  [dim]·[/]  "
             f"[dim]local[/]                  [dim]v{self._version}[/]"
         )
 

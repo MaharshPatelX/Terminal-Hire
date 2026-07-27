@@ -1,4 +1,4 @@
-"""Minimal settings for the TUI shell (full config lands in M1)."""
+"""Minimal settings for the Terminal-Hire TUI shell (full config lands in M1)."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     application_dry_run: bool = True
     application_submission_enabled: bool = False
     app_timezone: str = "America/Chicago"
+    database_url: str = "sqlite:///./data/terminal_hire.sqlite"
 
 
 def load_settings() -> Settings:

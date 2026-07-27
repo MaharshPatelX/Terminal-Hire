@@ -1,12 +1,12 @@
-"""Entry point: ``python -m job_applyer`` or ``job-applyer``."""
+"""Entry point: ``python -m job_applyer`` or ``terminal-hire``."""
 
 from __future__ import annotations
 
 
 def main() -> None:
-    from job_applyer.app import JobApplyerApp
+    from job_applyer.app import TerminalHireApp
 
-    JobApplyerApp().run()
+    TerminalHireApp().run()
 
 
 if __name__ == "__main__":

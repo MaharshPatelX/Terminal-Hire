@@ -2,11 +2,7 @@
 
 A planned **local Python TUI** for **US job applications**: interview you for a verified profile (optional work-auth **packs** — citizen / OPT / STEM OPT / etc. only if you need them), compile a LaTeX resume to PDF, then take a career-page URL and prepare (later optionally submit) applications with Playwright. Reasoning uses an **OpenAI-compatible client** pointed at **LM Studio** or **OpenRouter**. Agent structure is **inspired by Grok Build**, not dependent on the `grok` CLI.
 
-**Project name:** Terminal-Hire  
-**Package / module:** `terminal_hire`  
-**Launch:** `python -m terminal_hire` (planned)
-
-Planning phase — no application code yet. Live submit stays off for the MVP.
+Planning phase — UI shell started on `u/UI-dev`. Live submit stays off for the MVP.
 
 ## Planned MVP (active direction)
 
@@ -34,6 +30,17 @@ All planning docs live under [`docs/`](./docs/):
 - [`docs/PROJECT.md`](./docs/PROJECT.md) — **full product plan** (US scope, profile packs, data model, safety, MVP vs future).
 - [`docs/README.md`](./docs/README.md) — docs index.
 - [`.env.example`](./.env.example) — placeholder configuration only; no real credentials.
+
+## Run the TUI
+
+```powershell
+uv sync
+uv run terminal-hire
+# or
+uv run python -m job_applyer
+```
+
+Keys: `1–6` screens · `esc` home · `ctrl+q` quit · `/help` in the welcome prompt.
 
 ## Next step
 
