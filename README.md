@@ -32,7 +32,7 @@ uv run terminal-hire
 Alternate launch:
 
 ```powershell
-uv run python -m job_applyer
+uv run python -m src
 ```
 
 ### Keyboard
@@ -79,9 +79,9 @@ Terminal-Hire/
 ├─ .env.example
 ├─ pyproject.toml
 ├─ docs/                 # FLOW, architecture, full product plan
-├─ src/job_applyer/      # package (product name: Terminal-Hire)
-│  ├─ app.py             # TerminalHireApp
-│  └─ tui/               # screens + theme
+├─ src/                   # application package
+│  ├─ app.py              # TerminalHireApp
+│  └─ tui/                # screens + theme
 └─ data/                 # local DB / artifacts (gitignored)
 ```
 

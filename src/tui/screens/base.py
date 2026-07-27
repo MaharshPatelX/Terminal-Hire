@@ -6,8 +6,8 @@ from textual.app import ComposeResult
 from textual.screen import Screen
 from textual.widgets import Footer
 
-from job_applyer import __version__
-from job_applyer.tui.widgets import FooterHints, StatusStrip, TopBar
+from ... import __version__
+from ..widgets import FooterHints, StatusStrip, TopBar
 
 
 class AppScreen(Screen):

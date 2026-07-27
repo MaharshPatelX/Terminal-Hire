@@ -5,7 +5,7 @@ from __future__ import annotations
 from textual.reactive import reactive
 from textual.widgets import Static
 
-from job_applyer.tui.logo import BRAND
+from .logo import BRAND
 
 
 class TopBar(Static):

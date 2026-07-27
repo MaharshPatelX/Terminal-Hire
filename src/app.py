@@ -7,10 +7,10 @@ from pathlib import Path
 from textual.app import App
 from textual.binding import Binding
 
-from job_applyer.config import Settings, load_settings
-from job_applyer.tui.logo import BRAND
-from job_applyer.tui.screens import SCREENS
-from job_applyer.tui.theme import TERMINAL_HIRE_THEME
+from .config import Settings, load_settings
+from .tui.logo import BRAND
+from .tui.screens import SCREENS
+from .tui.theme import TERMINAL_HIRE_THEME
 
 THEME_PATH = Path(__file__).parent / "tui" / "theme.tcss"
 
@@ -97,7 +97,3 @@ class TerminalHireApp(App[None]):
                 self.navigate(target)
                 return
         self.notify(f"Unknown command: {command}", severity="warning")
-
-
-# Back-compat alias
-JobApplyerApp = TerminalHireApp

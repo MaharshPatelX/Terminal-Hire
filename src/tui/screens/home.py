@@ -15,9 +15,9 @@ from textual.reactive import reactive
 from textual.screen import Screen
 from textual.widgets import Input, Static
 
-from job_applyer import __version__
-from job_applyer.tui.logo import BRAND, PROMPT_HINT, TAGLINE
-from job_applyer.tui.nav import MENU_ITEMS, SCREEN_HOTKEYS
+from ... import __version__
+from ..logo import BRAND, PROMPT_HINT, TAGLINE
+from ..nav import MENU_ITEMS, SCREEN_HOTKEYS
 
 
 class MenuSelect(Message):
