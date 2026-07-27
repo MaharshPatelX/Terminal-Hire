@@ -1,47 +1,121 @@
 # Terminal-Hire
 
-A planned **local Python TUI** for **US job applications**: interview you for a verified profile (optional work-auth **packs** — citizen / OPT / STEM OPT / etc. only if you need them), compile a LaTeX resume to PDF, then take a career-page URL and prepare (later optionally submit) applications with Playwright. Reasoning uses an **OpenAI-compatible client** pointed at **LM Studio** or **OpenRouter**. Agent structure is **inspired by Grok Build**, not dependent on the `grok` CLI.
+**Hire from the terminal.** A local Python TUI for **US job applications**: build a verified profile (optional work-auth packs), compile a LaTeX resume to PDF, paste a career-page URL, and dry-run the application with Playwright — preview first, submit only when you allow it.
 
-Planning phase — UI shell started on `u/UI-dev`. Live submit stays off for the MVP.
+Inspired by [Grok Build](https://github.com/xai-org/grok-build)’s TUI patterns, reimplemented in **Python + Textual**. Not a `grok` CLI dependency.
 
-## Planned MVP (active direction)
+Live submit stays **off** for the MVP.
 
-- **Textual TUI** primary UI: Onboard → Profile/Packs → Resume → Apply URL → Apps (preview/OTP).
-- **US-only** apply; STEM OPT / H-1B are **optional packs**, not required for everyone.
-- Own agent runtime → LM Studio **or** OpenRouter (`LLM_PROVIDER` switch).
-- Playwright inventory + mapped fill; pause on site OTP/CAPTCHA/unknown; preview before submit.
-- Optional Chroma RAG; SQLite source of truth.
-- Safety: no invented facts, no CAPTCHA bypass, submit disabled until you enable it.
+## Status
 
-## Proposed stack
+| Area | State |
+|---|---|
+| Planning docs | Done (`docs/`) |
+| Textual TUI shell | Done (welcome + FLOW screens) |
+| Profile / agent / LLM | Not wired yet (M1–M2) |
+| Resume compile | Stub (M3) |
+| Playwright apply | Stub (M4–M5) |
+| Live submit | Locked off |
 
-Python, **Textual** TUI, SQLite, Playwright, Chroma (optional), LM Studio and/or OpenRouter (OpenAI-compatible `/v1`), LaTeX → PDF.
+## Quick start
 
-## Safety baseline
-
-Never invent application or work-auth facts, bypass CAPTCHA or access controls, leak secrets in logs, or retry ambiguous submits. Unknown/sensitive questions go to you. Live submission stays off until dry-run quality is good and you flip an explicit policy.
-
-## Documents
-
-All planning docs live under [`docs/`](./docs/):
-
-- [`docs/FLOW.md`](./docs/FLOW.md) — **end-to-end TUI + system flows** (start here to understand the product path).
-- [`docs/SYSTEM_ARCHITECTURE.md`](./docs/SYSTEM_ARCHITECTURE.md) — **active build blueprint** (modules, TUI, LLM switch, milestones).
-- [`docs/PROJECT.md`](./docs/PROJECT.md) — **full product plan** (US scope, profile packs, data model, safety, MVP vs future).
-- [`docs/README.md`](./docs/README.md) — docs index.
-- [`.env.example`](./.env.example) — placeholder configuration only; no real credentials.
-
-## Run the TUI
+Requires **Python 3.11+** and [uv](https://docs.astral.sh/uv/).
 
 ```powershell
+git clone https://github.com/MaharshPatelX/Terminal-Hire.git
+cd Terminal-Hire
 uv sync
+cp .env.example .env   # optional; edit LLM settings later
 uv run terminal-hire
-# or
+```
+
+Alternate launch:
+
+```powershell
 uv run python -m job_applyer
 ```
 
-Keys: `1–6` screens · `esc` home · `ctrl+q` quit · `/help` in the welcome prompt.
+### Keyboard
 
-## Next step
+| Key | Action |
+|---|---|
+| `1`–`6` | Onboard / Profile / Resume / Apply / Apps / Settings |
+| `↑` `↓` `Enter` | Move welcome menu / open |
+| `esc` | Home |
+| `ctrl+q` | Quit |
+| `/help` | Slash help (welcome prompt) |
 
-Confirm default `LLM_PROVIDER` and model ids, then implement M1→M5 (TUI shell → onboard → resume → URL inventory → dry-run).
+## What it does (MVP direction)
+
+1. **Onboard** — interview for verified core facts; enable only the work-auth packs you need (citizen / PR / OPT / STEM OPT / …).
+2. **Resume** — store `.tex`, compile to PDF for uploads.
+3. **Apply** — paste a US career URL → inventory fields → map from verified facts → dry-run fill → preview.
+4. **Apps** — approve preview, enter site OTP, resume after CAPTCHA (never auto-solve).
+
+**OTP** (one-time code on a site) ≠ **OPT** (visa pack).
+
+## Stack
+
+- **UI:** Textual (Grok Build–style welcome, status strip, screen chrome)
+- **Data:** SQLite (+ optional Chroma RAG later)
+- **Browser:** Playwright
+- **LLM:** LM Studio and/or OpenRouter via one OpenAI-compatible client (`LLM_PROVIDER`)
+- **Tooling:** `uv`, `pydantic-settings`
+
+## Safety baseline
+
+- Never invent application or work-auth facts
+- Never bypass CAPTCHA or access controls
+- Never leak secrets in logs
+- Never retry ambiguous submits
+- Unknown / sensitive questions go to you
+- `APPLICATION_SUBMISSION_ENABLED=false` until dry-run quality is good and you flip policy
+
+## Project layout
+
+```text
+Terminal-Hire/
+├─ README.md
+├─ .env.example
+├─ pyproject.toml
+├─ docs/                 # FLOW, architecture, full product plan
+├─ src/job_applyer/      # package (product name: Terminal-Hire)
+│  ├─ app.py             # TerminalHireApp
+│  └─ tui/               # screens + theme
+└─ data/                 # local DB / artifacts (gitignored)
+```
+
+## Documents
+
+| Doc | Role |
+|---|---|
+| [`docs/FLOW.md`](./docs/FLOW.md) | End-to-end TUI + system flows |
+| [`docs/SYSTEM_ARCHITECTURE.md`](./docs/SYSTEM_ARCHITECTURE.md) | Build blueprint (modules, LLM switch, M0–M8) |
+| [`docs/PROJECT.md`](./docs/PROJECT.md) | Full requirements (packs, data model, safety) |
+| [`docs/README.md`](./docs/README.md) | Docs index |
+| [`.env.example`](./.env.example) | Config placeholders only — no real credentials |
+
+If docs disagree on stack or MVP order, **`SYSTEM_ARCHITECTURE.md` wins** until reconciled.
+
+## Config sketch
+
+Copy `.env.example` → `.env`. Important knobs:
+
+```text
+LLM_PROVIDER=lmstudio          # lmstudio | openrouter | off
+APPLICATION_DRY_RUN=true
+APPLICATION_SUBMISSION_ENABLED=false
+DATABASE_URL=sqlite:///./data/terminal_hire.sqlite
+```
+
+## Next steps
+
+1. Confirm default `LLM_PROVIDER` + model ids + LaTeX engine (M0)
+2. M1 — SQLite profile store + real `llm-check`
+3. M2 — agent onboard interview
+4. M3 — LaTeX → PDF
+5. M4–M5 — URL inventory → mapper → dry-run fill → approve
+
+## License
+
+See repository for license terms once added.
