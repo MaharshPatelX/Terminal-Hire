@@ -1,40 +1,36 @@
-"""Welcome logos — ASCII-only so Windows CMD / ConHost render cleanly.
+"""Welcome brand + Grok-style hero mark for TUI-Hire.
 
-Box-drawing FIGlet (╗╚═█) is avoided: many Windows console fonts give those
-glyphs the wrong cell width and the banner collapses into noise.
+ASCII-only (no box-drawing FIGlet) so Windows CMD renders cleanly.
 """
 
 from __future__ import annotations
 
-# Readable wordmark (~54 cols) — pure ASCII, no box-drawing
-LOGO = r"""
-+----------------------------------------------------+
-|                                                    |
-|                  TERMINAL-HIRE                     |
-|                                                    |
-+----------------------------------------------------+
+from job_applyer import __version__
+
+BRAND = "TUI-Hire"
+BRAND_MARK = "TUI-Hire"
+BRAND_SLUG = "tui-hire"
+TAGLINE = "US job applications | verified profile | dry-run first"
+
+# Left column mark — compact, intentional, Windows-safe
+HERO_LOGO = r"""
+      .oOOo.
+    oO------Oo
+   o   TUI    o
+   O   HIRE   O
+    Oo------oO
+      'oOOo'
 """.strip(
     "\n"
 )
 
-LOGO_SMALL = LOGO
-
-# Narrow mark for tight terminals
-LOGO_COMPACT = r"""
-+----------------------+
-|    TERMINAL-HIRE     |
-+----------------------+
-""".strip(
-    "\n"
+HERO_BLURB = (
+    "Interview, resume PDF, and dry-run US career pages from the terminal. "
+    "Submit stays locked until you say so."
 )
 
-TAGLINE = "hire from the terminal | verified profile | dry-run first"
-BRAND = "Terminal-Hire"
-BRAND_SLUG = "terminal-hire"
+TIP = "Tip: Press 1-6 or click a menu row | type /help in the prompt | esc returns here"
 
 
-def welcome_logo(width: int) -> str:
-    """Pick a logo that fits the current terminal width."""
-    if width >= 56:
-        return LOGO
-    return LOGO_COMPACT
+def hero_title_line() -> str:
+    return f"[bold]{BRAND}[/]  [dim]{__version__}[/]"

@@ -1,11 +1,11 @@
-/* Terminal-Hire TUI — layout & chrome (colors come from Theme) */
+/* TUI-Hire — Grok Build–inspired layout & chrome */
 
 TerminalHireApp {
     background: $background;
     color: $foreground;
 }
 
-/* Top bar — Grok welcome top_bar vibe */
+/* Workspace chrome (non-welcome screens) */
 #top-bar {
     dock: top;
     height: 1;
@@ -38,81 +38,102 @@ TerminalHireApp {
     text-style: bold;
 }
 
-/* ---- Welcome / Home ---- */
+/* ---- Welcome (Grok hero box) ---- */
 
 WelcomeScreen {
     layout: vertical;
+    align: center middle;
+    background: $background;
 }
 
-#welcome-wrap {
-    width: 56;
-    max-width: 100%;
+#welcome-stack {
+    width: 88;
+    max-width: 96%;
     height: auto;
-    padding: 1 2;
-    margin: 1 0;
-    align-horizontal: center;
+    align: center middle;
 }
 
-#logo {
+#hero-box {
     width: 100%;
     height: auto;
-    color: $primary;
-    text-align: center;
-    text-style: bold;
+    border: round #484f58;
+    padding: 1 2;
+    background: $background;
+}
+
+#hero-logo {
+    width: 20;
+    height: auto;
+    color: $text-muted;
+    padding: 0 2 0 0;
+    text-align: left;
+}
+
+#hero-right {
+    width: 1fr;
+    height: auto;
+    padding: 0 1;
+}
+
+#hero-title {
+    width: 100%;
+    height: 1;
+    color: $foreground;
     margin-bottom: 1;
 }
 
-#tagline {
+#hero-blurb {
     width: 100%;
+    height: auto;
     color: $text-muted;
-    text-align: center;
     margin-bottom: 1;
 }
 
 #menu {
     width: 100%;
     height: auto;
-    margin-bottom: 1;
+    margin-top: 1;
 }
 
 .menu-row {
     width: 100%;
     height: 1;
     padding: 0 1;
+    color: $foreground;
 }
 
 .menu-row:hover,
 .menu-row.-selected {
-    background: $boost;
+    background: #21262d;
 }
 
-.menu-row .label {
-    color: $foreground;
-    text-style: bold;
-}
-
-.menu-row .shortcut {
+#welcome-tip {
+    width: 100%;
+    height: auto;
     color: $text-muted;
-    dock: right;
+    text-align: center;
+    margin-top: 1;
+    margin-bottom: 1;
 }
 
 #welcome-prompt {
     width: 100%;
-    margin-top: 1;
-    border: tall $boost;
-    background: $panel;
+    border: round #484f58;
+    background: $background;
     padding: 0 1;
+    margin-top: 0;
 }
 
 #welcome-prompt:focus {
-    border: tall $primary;
+    border: round $primary;
 }
 
-#welcome-hint {
+#welcome-foot {
     width: 100%;
-    color: $text-disabled;
-    text-align: center;
-    margin-top: 1;
+    height: 1;
+    color: $text-muted;
+    text-align: right;
+    margin-top: 0;
 }
 
 /* ---- Shared screen chrome ---- */
@@ -135,7 +156,7 @@ WelcomeScreen {
 
 .panel {
     background: $surface;
-    border: tall $boost;
+    border: round #484f58;
     padding: 1 2;
     margin: 0 1 1 1;
     height: auto;
@@ -165,7 +186,7 @@ WelcomeScreen {
 
 .chat-log {
     height: 1fr;
-    border: tall $boost;
+    border: round #484f58;
     background: $panel;
     padding: 1;
     margin: 0 1;
@@ -180,13 +201,13 @@ WelcomeScreen {
 
 #chat-input {
     width: 1fr;
-    border: tall $boost;
+    border: round #484f58;
     background: $panel;
     padding: 0 1;
 }
 
 #chat-input:focus {
-    border: tall $primary;
+    border: round $primary;
 }
 
 .form-row {
@@ -197,13 +218,13 @@ WelcomeScreen {
 Input,
 TextArea {
     background: $panel;
-    border: tall $boost;
+    border: round #484f58;
     color: $foreground;
 }
 
 Input:focus,
 TextArea:focus {
-    border: tall $primary;
+    border: round $primary;
 }
 
 Button {
@@ -217,6 +238,6 @@ DataTable {
 
 ListView {
     background: $surface;
-    border: tall $boost;
+    border: round #484f58;
     height: 1fr;
 }
