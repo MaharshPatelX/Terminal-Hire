@@ -1,7 +1,12 @@
-"""Welcome / Home — Grok Build–style hero box + prompt."""
+"""TUI-Hire welcome workspace.
+
+The layout combines a Claude-style split dashboard with a Grok-style
+bottom composer while keeping a distinct TUI-Hire identity.
+"""
 
 from __future__ import annotations
 
+from textual import events
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
@@ -11,13 +16,7 @@ from textual.screen import Screen
 from textual.widgets import Input, Static
 
 from job_applyer import __version__
-from job_applyer.tui.logo import (
-    BRAND,
-    HERO_BLURB,
-    HERO_LOGO,
-    TIP,
-    hero_title_line,
-)
+from job_applyer.tui.logo import BRAND, PROMPT_HINT, TAGLINE
 from job_applyer.tui.nav import MENU_ITEMS, SCREEN_HOTKEYS
 
 
@@ -29,8 +28,18 @@ class MenuSelect(Message):
         super().__init__()
 
 
-class MenuRow(Static):
-    """Grok-style menu row: label left, shortcut right."""
+class WelcomePrompt(Input):
+    """Composer input that preserves empty-prompt numeric navigation."""
+
+    def on_key(self, event: events.Key) -> None:
+        if event.key in SCREEN_HOTKEYS and not self.value:
+            event.prevent_default()
+            event.stop()
+            self.app.navigate(SCREEN_HOTKEYS[event.key])
+
+
+class MenuRow(Horizontal):
+    """Clickable launchpad row with a right-aligned shortcut."""
 
     def __init__(self, screen_id: str, label: str, shortcut: str, **kwargs) -> None:
         super().__init__(classes="menu-row", **kwargs)
@@ -38,59 +47,137 @@ class MenuRow(Static):
         self._label = label
         self._shortcut = shortcut
 
-    def on_mount(self) -> None:
-        self.update(
-            f"[bold]{self._label}[/]"
-            f"{' ' * max(2, 28 - len(self._label))}"
-            f"[dim]{self._shortcut}[/]"
-        )
+    def compose(self) -> ComposeResult:
+        yield Static(self._label, classes="menu-label")
+        yield Static(self._shortcut, classes="menu-key")
 
     def on_click(self) -> None:
         self.post_message(MenuSelect(self.screen_id))
 
+    def set_selected(self, selected: bool) -> None:
+        self.set_class(selected, "-selected")
+        prefix = "[bold #63e6be]>[/] " if selected else "  "
+        self.query_one(".menu-label", Static).update(
+            f"{prefix}[bold]{self._label}[/]" if selected else f"{prefix}{self._label}"
+        )
+
 
 class WelcomeScreen(Screen):
-    """Grok-like welcome: centered hero (logo | title+menu) + tip + prompt."""
+    """Full welcome workspace with launchpad, readiness, and composer."""
 
     BINDINGS = [
-        Binding("up", "menu_up", "Up", show=False),
-        Binding("down", "menu_down", "Down", show=False),
+        Binding("up", "menu_up", "Up", show=False, priority=True),
+        Binding("down", "menu_down", "Down", show=False, priority=True),
         Binding("enter", "menu_enter", "Open", show=False),
     ]
 
     selected: reactive[int] = reactive(0)
 
     def compose(self) -> ComposeResult:
-        with Vertical(id="welcome-stack"):
-            with Horizontal(id="hero-box"):
-                yield Static(HERO_LOGO, id="hero-logo")
-                with Vertical(id="hero-right"):
-                    yield Static(hero_title_line(), id="hero-title", markup=True)
-                    yield Static(HERO_BLURB, id="hero-blurb")
-                    with Vertical(id="menu"):
-                        for sid, label, shortcut in MENU_ITEMS:
-                            yield MenuRow(sid, label, shortcut, id=f"menu-{sid}")
-            yield Static(TIP, id="welcome-tip")
-            yield Input(placeholder="", id="welcome-prompt")
+        with Horizontal(id="welcome-topbar"):
             yield Static(
-                f"[dim]{BRAND}[/]                                    "
-                f"[dim][{__version__}][/]",
-                id="welcome-foot",
+                f"[bold #63e6be]{BRAND}[/] [dim]/ local workspace[/]",
+                id="workspace-name",
             )
+            yield Static("", id="workspace-runtime")
+
+        with Vertical(id="welcome-main"):
+            with Horizontal(id="welcome-card"):
+                with Vertical(id="identity-pane"):
+                    yield Static(">_", id="brand-glyph")
+                    yield Static(BRAND, id="brand-name")
+                    yield Static("APPLICATION COPILOT", id="brand-kicker")
+                    yield Static(TAGLINE, id="brand-copy")
+                    yield Static(
+                        "[bold #63e6be]LOCAL-FIRST[/]\n"
+                        "[dim]Verified facts only\nSubmit locked by default[/]",
+                        id="brand-policy",
+                    )
+
+                with Vertical(id="workspace-pane"):
+                    yield Static("APPLICATION WORKSPACE", classes="eyebrow")
+                    yield Static("Where should we start?", id="workspace-title")
+                    yield Static(
+                        "Move with arrows, press enter, or use the number keys.",
+                        id="workspace-subtitle",
+                    )
+
+                    with Horizontal(id="workspace-grid"):
+                        with Vertical(id="launchpad"):
+                            yield Static("LAUNCHPAD", classes="section-label")
+                            with Vertical(id="menu"):
+                                for sid, label, shortcut in MENU_ITEMS:
+                                    yield MenuRow(
+                                        sid,
+                                        label,
+                                        shortcut,
+                                        id=f"menu-{sid}",
+                                    )
+
+                        with Vertical(id="readiness"):
+                            yield Static("READINESS", classes="section-label")
+                            yield Static("", id="readiness-provider", classes="ready-row")
+                            yield Static("", id="readiness-profile", classes="ready-row")
+                            yield Static("", id="readiness-resume", classes="ready-row")
+                            yield Static("", id="readiness-safety", classes="ready-row")
+                            yield Static("", id="readiness-packs", classes="ready-row")
+
+        with Vertical(id="composer-shell"):
+            yield Static(
+                "[dim]Tip:[/] [#63e6be]/onboard[/] builds your profile; "
+                "[#63e6be]/apply[/] opens the URL workflow.",
+                id="composer-tip",
+            )
+            yield WelcomePrompt(placeholder=PROMPT_HINT, id="welcome-prompt")
+            with Horizontal(id="composer-meta"):
+                yield Static(
+                    "[dim]enter[/] run   [dim]up/down[/] navigate   "
+                    "[dim]esc[/] home   [dim]ctrl+q[/] quit",
+                    id="composer-keys",
+                )
+                yield Static(
+                    f"[#63e6be]{BRAND}[/] [dim]v{__version__}[/]",
+                    id="composer-status",
+                )
 
     def on_mount(self) -> None:
+        self._set_responsive_classes()
         self._sync_selection()
+        self._refresh_status()
         prompt = self.query_one("#welcome-prompt", Input)
-        # Grok-style: prompt visible but digits still navigate until you type
-        prompt.placeholder = ">  ask or press 1-6…"
-        prompt.can_focus = False
-        self.set_focus(None)
+        prompt.focus()
 
-    def on_click(self, event) -> None:  # noqa: ANN001
-        if getattr(event.widget, "id", None) == "welcome-prompt":
-            prompt = self.query_one("#welcome-prompt", Input)
-            prompt.can_focus = True
-            prompt.focus()
+    def on_resize(self) -> None:
+        self._set_responsive_classes()
+
+    def _set_responsive_classes(self) -> None:
+        self.set_class(self.size.width < 92, "-compact")
+        self.set_class(self.size.height < 31, "-short")
+
+    def _refresh_status(self) -> None:
+        settings = self.app.settings
+        provider = settings.llm_provider
+        provider_color = "#63e6be" if provider != "off" else "#8b949e"
+        self.query_one("#workspace-runtime", Static).update(
+            f"[dim]provider[/] [bold {provider_color}]{provider}[/]  "
+            f"[dim]· dry-run[/] [bold #63e6be]on[/]"
+        )
+        self.query_one("#readiness-provider", Static).update(
+            f"[{provider_color}]●[/]  LLM      [bold]{provider}[/]"
+        )
+        self.query_one("#readiness-profile", Static).update(
+            "[#d29922]○[/]  Profile  [dim]setup needed[/]"
+        )
+        self.query_one("#readiness-resume", Static).update(
+            "[#8b949e]○[/]  Resume   [dim]not built[/]"
+        )
+        self.query_one("#readiness-safety", Static).update(
+            "[#63e6be]●[/]  Safety   [bold]dry-run[/]"
+        )
+        packs = getattr(self.app, "enabled_packs", "none")
+        self.query_one("#readiness-packs", Static).update(
+            f"[#8b949e]○[/]  Packs    [dim]{packs}[/]"
+        )
 
     def watch_selected(self, _value: int) -> None:
         self._sync_selection()
@@ -98,20 +185,23 @@ class WelcomeScreen(Screen):
     def _sync_selection(self) -> None:
         rows = list(self.query(MenuRow))
         for i, row in enumerate(rows):
-            row.set_class(i == self.selected, "-selected")
+            row.set_selected(i == self.selected)
 
     def action_menu_up(self) -> None:
-        if self.query_one("#welcome-prompt", Input).has_focus:
+        prompt = self.query_one("#welcome-prompt", Input)
+        if prompt.has_focus and prompt.value:
             return
         self.selected = (self.selected - 1) % len(MENU_ITEMS)
 
     def action_menu_down(self) -> None:
-        if self.query_one("#welcome-prompt", Input).has_focus:
+        prompt = self.query_one("#welcome-prompt", Input)
+        if prompt.has_focus and prompt.value:
             return
         self.selected = (self.selected + 1) % len(MENU_ITEMS)
 
     def action_menu_enter(self) -> None:
-        if self.query_one("#welcome-prompt", Input).has_focus:
+        prompt = self.query_one("#welcome-prompt", Input)
+        if prompt.has_focus and prompt.value:
             return
         self.post_message(MenuSelect(MENU_ITEMS[self.selected][0]))
 
@@ -122,6 +212,7 @@ class WelcomeScreen(Screen):
         raw = event.value.strip()
         event.input.value = ""
         if not raw:
+            self.post_message(MenuSelect(MENU_ITEMS[self.selected][0]))
             return
         if raw.startswith("/"):
             self.app.handle_slash(raw)
@@ -129,4 +220,8 @@ class WelcomeScreen(Screen):
         if raw in SCREEN_HOTKEYS:
             self.app.navigate(SCREEN_HOTKEYS[raw])
             return
-        self.app.notify(f"Unknown command: {raw}", severity="warning")
+        self.app.notify(
+            "Agent chat arrives in M2. Use /onboard, /apply, or /settings for now.",
+            title=BRAND,
+            severity="information",
+        )
