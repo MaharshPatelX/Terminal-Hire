@@ -2,8 +2,6 @@
 
 **Hire from the terminal.** A local Python TUI for **US job applications**: build one verified `PROFILE.md`, reuse answers learned from job portals, fill with Playwright, capture an audit trail, and permit one supervised Submit click only after review.
 
-Inspired by [Grok Build](https://github.com/xai-org/grok-build)’s TUI patterns, reimplemented in **Python + Textual**. Not a `grok` CLI dependency.
-
 Supervised submit is implemented but **off by default**.
 
 ## Status
@@ -60,7 +58,7 @@ uv run python -m src
 
 ## Stack
 
-- **UI:** Textual (Grok Build–style welcome, status strip, screen chrome)
+- **UI:** Textual fullscreen workspace with status and navigation chrome
 - **Profile truth:** Strict YAML front matter + readable sections in `PROFILE.md`
 - **Application data:** SQLite (plaintext site credentials by explicit product policy, events, checkpoints, field actions)
 - **Retrieval:** exact local mapping → lexical/RAG candidates → agent later → ask user

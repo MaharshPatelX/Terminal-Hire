@@ -1,7 +1,7 @@
 [project]
 name = "terminal-hire"
 version = "0.1.0"
-description = "Terminal-Hire — local Python TUI for US job applications (Grok Build–inspired)"
+description = "Terminal-Hire — local Python TUI for supervised US job applications"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

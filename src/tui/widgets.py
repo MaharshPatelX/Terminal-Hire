@@ -1,4 +1,4 @@
-"""Shared chrome widgets (Grok Build–style top bar / status / hints)."""
+"""Shared top-bar, status, and shortcut-hint widgets."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from .logo import BRAND
 
 
 class TopBar(Static):
-    """Left brand + right version — inspired by Grok welcome top_bar."""
+    """Display the product brand and current version."""
 
     DEFAULT_CSS = """
     TopBar {
@@ -66,7 +66,7 @@ class StatusStrip(Static):
 
 
 class FooterHints(Static):
-    """Bottom key hints — Grok-style shortcut legend."""
+    """Display the bottom shortcut legend."""
 
     def __init__(self, hints: str | None = None, **kwargs) -> None:
         super().__init__(id="footer-hints", **kwargs)

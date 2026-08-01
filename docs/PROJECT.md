@@ -44,7 +44,7 @@ The first release includes an **opt-in supervised submit**. Submission remains d
 - Forced first-run onboard → strict Markdown profile + optional work-auth packs.
 - Profile editor for personal data, professional history, documents, policies, and reusable portal Q&A.
 - `apply <url>` for US career/application URLs: login/account creation, OTP pause, inventory, map, fill, evidence, preview, approve, and one supervised submit.
-- Own agent runtime (Grok Build–inspired); LM Studio ↔ OpenRouter ↔ `off`.
+- Project-owned supervised agent runtime; LM Studio ↔ OpenRouter ↔ `off`.
 - Exact local profile lookup first; disposable non-sensitive RAG index later.
 - SQLite for credentials and application audit; `PROFILE.md` is profile truth.
 - Pause on unknown / sensitive / CAPTCHA / OTP / consent.
@@ -70,7 +70,7 @@ The first release includes an **opt-in supervised submit**. Submission remains d
 - Guessing or enhancing resume/work-auth facts.
 - Mass-applying with a generic resume.
 - Multi-country job markets in this phase.
-- Requiring xAI cloud / `grok` CLI / TypeScript for the product.
+- Requiring a third-party agent CLI or a TypeScript runtime for the product.
 
 ---
 
@@ -164,7 +164,7 @@ Textual App (screens) ──> Apply orchestrator (state machine + gates)
    |                            |
    |                            +──> Playwright browser worker
    v
-Agent runtime (Grok Build–inspired)
+Agent runtime (typed planning + permission gates)
    |  roles: onboarder | form_mapper | coach
    |  tools + permission allowlists
    v
@@ -187,7 +187,7 @@ Screen flows: [`FLOW.md`](./FLOW.md). Package layout: `SYSTEM_ARCHITECTURE.md`.
 - **`PROFILE.md` is the only profile source of truth;** strict YAML front matter plus readable Markdown.
 - **SQLite** stores plaintext site credentials by explicit policy and all application/audit state; Postgres is optional later.
 - **In-process orchestration** for MVP; Redis/BullMQ only if needed later.
-- **Own agent runtime** inspired by Grok Build; no `grok` / `xg-agent-sdk` requirement.
+- **Project-owned agent runtime** with explicit tools, typed plans, and permission gates.
 - **LLM_PROVIDER switch:** `lmstudio` | `openrouter` | `off` — one OpenAI SDK factory.
 - **Playwright** for browser; model returns fill **plans**; Python executes under gates.
 - **Retrieval order:** exact structured lookup → local search/RAG → minimal agent context → ask the user.
@@ -232,7 +232,7 @@ Names map to Python packages directly under `src/` (see §12 and `SYSTEM_ARCHITE
 
 #### `agent`
 
-- Runtime loop inspired by Grok Build.
+- Project-owned runtime loop with explicit tool permissions.
 - Roles: `onboarder`, `form_mapper`, `coach`.
 - Tool registry + permission allowlists.
 
@@ -646,7 +646,7 @@ Older TS/Postgres/dashboard-first milestones are **withdrawn** as the MVP path.
 
 - Single user, one verified Markdown profile (TUI onboard).
 - SQLite application audit + plaintext site credentials; optional disposable local index.
-- Python **Textual TUI** + agent (Grok Build–inspired) + LM Studio ↔ OpenRouter.
+- Python **Textual TUI** + supervised agent runtime + LM Studio ↔ OpenRouter.
 - LaTeX resume → PDF.
 - URL-first Playwright login/fill; preview; OTP/CAPTCHA/consent pause.
 - Opt-in one-click supervised submit; no CAPTCHA solve; no LinkedIn/Indeed scraping; no required cloud except optional OpenRouter.
