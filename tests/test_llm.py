@@ -32,6 +32,8 @@ def test_openrouter_uses_expected_multimodal_request_shape(tmp_path) -> None:
         llm_provider="openrouter",
         openrouter_api_key="test-key",
         openrouter_model="qwen/qwen3.6-35b-a3b",
+        openrouter_provider="venice",
+        openrouter_allow_fallbacks=False,
         openrouter_http_referer="https://example.com/terminal-hire",
         openrouter_app_title="Terminal-Hire",
     )
@@ -51,7 +53,12 @@ def test_openrouter_uses_expected_multimodal_request_shape(tmp_path) -> None:
                 "HTTP-Referer": "https://example.com/terminal-hire",
                 "X-OpenRouter-Title": "Terminal-Hire",
             },
-            "extra_body": {},
+            "extra_body": {
+                "provider": {
+                    "only": ["venice"],
+                    "allow_fallbacks": False,
+                }
+            },
             "model": "qwen/qwen3.6-35b-a3b",
             "messages": [
                 {
@@ -80,6 +87,18 @@ def test_openrouter_requires_api_key(tmp_path) -> None:
     with pytest.raises(LLMConfigurationError, match="OPENROUTER_API_KEY"):
         OpenRouterClient(
             Settings(data_dir=tmp_path, openrouter_api_key=None),
+            client=FakeOpenAI(),
+        )
+
+
+def test_openrouter_requires_provider(tmp_path) -> None:
+    with pytest.raises(LLMConfigurationError, match="OPENROUTER_PROVIDER"):
+        OpenRouterClient(
+            Settings(
+                data_dir=tmp_path,
+                openrouter_api_key="test-key",
+                openrouter_provider=" ",
+            ),
             client=FakeOpenAI(),
         )
 

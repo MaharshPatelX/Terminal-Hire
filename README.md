@@ -129,10 +129,13 @@ To use Qwen through OpenRouter, keep the key only in your untracked `.env`:
 LLM_PROVIDER=openrouter
 OPENROUTER_API_KEY=  # add your key only in the untracked .env file
 OPENROUTER_MODEL=qwen/qwen3.6-35b-a3b
+OPENROUTER_PROVIDER=venice
+OPENROUTER_ALLOW_FALLBACKS=false
 ```
 
 The OpenRouter adapter accepts explicit text, public image URLs, public video URLs,
-or image/video data URLs. It never attaches profile data or local files automatically.
+or image/video data URLs. Requests are pinned to Venice without provider fallback.
+It never attaches profile data or local files automatically.
 Use **Settings → Check connection** to make a minimal authenticated model request.
 
 ## Next steps
