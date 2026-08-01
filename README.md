@@ -17,7 +17,8 @@ Supervised submit is implemented but **off by default**.
 | SQLite credentials / application audit | Implemented |
 | Playwright inventory/fill/checkpoints | Foundation implemented |
 | Supervised submit | Implemented; opt-in and one-use |
-| LLM provider / vector RAG | Planned; deterministic local retrieval works now |
+| OpenRouter Qwen provider | Implemented for text, image, and video URL input |
+| Agent / vector RAG | Planned; deterministic local retrieval works now |
 
 ## Quick start
 
@@ -64,7 +65,7 @@ uv run python -m src
 - **Application data:** SQLite (plaintext site credentials by explicit product policy, events, checkpoints, field actions)
 - **Retrieval:** exact local mapping → lexical/RAG candidates → agent later → ask user
 - **Browser:** Playwright
-- **LLM:** LM Studio and/or OpenRouter via one OpenAI-compatible client (`LLM_PROVIDER`)
+- **LLM:** OpenRouter through the OpenAI-compatible client; LM Studio adapter remains planned
 - **Tooling:** `uv`, `pydantic-settings`
 
 ## Safety baseline
@@ -92,6 +93,7 @@ Terminal-Hire/
 │  ├─ db/                  # SQLite credentials + application audit
 │  ├─ browser/             # Playwright worker and evidence capture
 │  ├─ apply/               # profile-backed application orchestration
+│  ├─ llm/                 # OpenRouter/OpenAI-compatible client
 │  └─ tui/                 # screens + theme
 └─ tests/
 ```
@@ -121,10 +123,22 @@ APPLICATION_SUBMISSION_ENABLED=false
 # DATA_DIR=C:\private\TUI-Hire  # optional override
 ```
 
+To use Qwen through OpenRouter, keep the key only in your untracked `.env`:
+
+```dotenv
+LLM_PROVIDER=openrouter
+OPENROUTER_API_KEY=  # add your key only in the untracked .env file
+OPENROUTER_MODEL=qwen/qwen3.6-35b-a3b
+```
+
+The OpenRouter adapter accepts explicit text, public image URLs, public video URLs,
+or image/video data URLs. It never attaches profile data or local files automatically.
+Use **Settings → Check connection** to make a minimal authenticated model request.
+
 ## Next steps
 
-1. Add an LLM adapter for LM Studio/OpenRouter with schema-validated minimal context.
-2. Add a disposable local vector index for non-sensitive `PROFILE.md` chunks.
+1. Add schema-validated agent planning with minimal non-sensitive context.
+2. Add the LM Studio adapter and a disposable local vector index.
 3. Expand ATS-specific selectors, account creation, and browser recovery.
 4. Add document hashing and LaTeX → PDF compilation.
 
