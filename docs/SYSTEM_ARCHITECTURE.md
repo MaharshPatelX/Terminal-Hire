@@ -3,7 +3,7 @@
 Status: active implementation blueprint
 Language: **Python only**  
 LLM: **LM Studio (local)** and/or **OpenRouter** — both via **OpenAI-compatible API**, switchable  
-Agent design reference: **Grok Build** (open-source patterns only — **not** a runtime dependency)  
+Agent runtime: **project-owned Python services** with explicit tools and permission gates
 Last updated: 2026-07-27
 
 This document is the **active build blueprint** (modules, **TUI**, LLM switch, M0–M8).  
@@ -16,7 +16,7 @@ If docs disagree on stack or MVP order, update both — this file wins for imple
 
 ## 1. Product in one sentence
 
-**Terminal-Hire** is a local Python **TUI** for **US job applications**: interviews you, stores verified facts + a LaTeX resume (plus **optional work-auth packs** like citizen / OPT / STEM OPT only if you enable them), then takes a US career-page URL and uses **your own agent runtime** (Grok Build–inspired) with **LM Studio or OpenRouter**, plus Playwright, to fill applications safely (preview first; submit only when allowed).
+**Terminal-Hire** is a local Python **TUI** for **US job applications**: interviews you, stores verified facts + a LaTeX resume (plus **optional work-auth packs** like citizen / OPT / STEM OPT only if you enable them), then takes a US career-page URL and uses a supervised Python agent runtime with **LM Studio or OpenRouter**, plus Playwright, to fill applications safely (preview first; submit only when allowed).
 
 ---
 
@@ -25,7 +25,7 @@ If docs disagree on stack or MVP order, update both — this file wins for imple
 1. **Start from apply-by-URL** for **US** career pages — not ATS board crawling.
 2. **Python owns the product** — **TUI**, DB, Playwright, RAG, **and the agent loop**.
 3. **TUI-first UX** — Textual fullscreen app; business logic in services (not in widgets).
-4. **Grok Build is a blueprint, not a dependency**.
+4. **The agent runtime is project-owned** — explicit tools, typed plans, and permission gates.
 5. **Inference is OpenAI-standard and pluggable** — `LLM_PROVIDER=lmstudio|openrouter|off`.
 6. **Playwright owns the browser** — model proposes; Python executes under gates.
 7. **`PROFILE.md` is profile truth** — strict fields plus readable professional narrative and portal Q&A.
@@ -48,7 +48,7 @@ If docs disagree on stack or MVP order, update both — this file wins for imple
                 v                             v
 ┌───────────────────────────┐   ┌─────────────────────────────┐
 │  Our Agent Runtime        │   │   Apply Orchestrator        │
-│  (Grok Build–inspired)    │   │   (state machine + gates)   │
+│  (typed plans + tools)    │   │   (state machine + gates)   │
 │                           │   │                             │
 │  • message / tool loop    │   │  1. open URL (Playwright)   │
 │  • tool registry          │◄──┤  2. inventory fields        │
@@ -75,11 +75,11 @@ If docs disagree on stack or MVP order, update both — this file wins for imple
 
 Full screen-by-screen flows: [`FLOW.md`](./FLOW.md).
 
-### 3.1 Grok Build = reference only
+### 3.1 Project-owned agent runtime
 
-Study your local tree `coding-agent/grok-build` (and the public repo) for **structure**, then reimplement the useful parts in Python:
+The runtime is implemented directly in Python with narrow responsibilities and explicit safety boundaries:
 
-| Borrow from Grok Build | Our Python equivalent |
+| Capability | Python implementation |
 |---|---|
 | Agent loop (context → model → tools → repeat) | `agent/runtime.py` |
 | Tool definitions + dispatch | `agent/tools/` registry |
@@ -87,12 +87,6 @@ Study your local tree `coding-agent/grok-build` (and the public repo) for **stru
 | Agent role files (prompt + tools) | `agent/roles/*.md` |
 | Multi-turn session | conversation state + SQLite run log |
 | Clear separation host vs model | orchestrator + LLM client |
-
-| Do **not** require at runtime | Why |
-|---|---|
-| `grok` CLI / TUI | You want LM Studio, not that harness |
-| `xg-agent-sdk` | Optional reading only |
-| `XAI_API_KEY` / cloud Grok | Inference stays local |
 
 ### 3.2 Dual providers: LM Studio ↔ OpenRouter (same OpenAI client)
 
@@ -246,7 +240,7 @@ Statuses include `ready_to_apply`, `applying`, `waiting_for_user_answer`, `waiti
 
 ---
 
-## 7. Agent runtime design (ours, Grok-inspired)
+## 7. Agent runtime design
 
 ### 7.1 Loop (simplified)
 

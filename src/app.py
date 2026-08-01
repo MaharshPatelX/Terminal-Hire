@@ -1,4 +1,4 @@
-"""Textual App — Grok Build–inspired shell for TUI-Hire."""
+"""Textual application shell for TUI-Hire."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ THEME_PATH = Path(__file__).parent / "tui" / "theme.tcss"
 
 
 class TerminalHireApp(App[None]):
-    """Fullscreen TUI: Grok-style welcome + FLOW screens."""
+    """Fullscreen TUI with welcome and application workflow screens."""
 
     CSS_PATH = THEME_PATH
     TITLE = BRAND

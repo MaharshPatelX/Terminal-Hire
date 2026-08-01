@@ -1,4 +1,4 @@
-/* TUI-Hire — Grok Build–inspired layout & chrome */
+/* TUI-Hire application layout and chrome */
 
 TerminalHireApp {
     background: $background;

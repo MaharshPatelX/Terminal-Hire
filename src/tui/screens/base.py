@@ -12,7 +12,7 @@ from ..widgets import FooterHints, StatusStrip, TopBar
 
 
 class AppScreen(Screen):
-    """Base screen: Grok-style chrome around subclass body()."""
+    """Base screen with shared application chrome around subclass body()."""
 
     def compose(self) -> ComposeResult:
         yield TopBar(version=__version__)
