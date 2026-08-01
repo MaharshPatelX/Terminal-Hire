@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+from openai import OpenAIError
+from textual import work
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.css.query import NoMatches
 from textual.widgets import Button, Label, Select, Static, Switch
 
+from ...llm import LLMConfigurationError, LLMResponseError, OpenRouterClient
 from .base import AppScreen
 
 
@@ -123,7 +126,36 @@ class SettingsScreen(AppScreen):
         if provider == "off":
             result.update("[dim]Provider is off — no endpoint to check.[/]")
             return
+        if provider == "openrouter":
+            result.update("[yellow]checking[/]  Calling the configured OpenRouter model…")
+            self._check_openrouter()
+            return
         result.update(
-            f"[yellow]stub[/]  Would ping {provider} OpenAI-compatible /v1 (wire in M1)."
+            f"[yellow]not implemented[/]  {provider} connection check is not wired yet."
         )
-        self.app.notify("llm-check stub", severity="information")
+        self.app.notify(f"{provider} check is not implemented", severity="information")
+
+    @work(thread=True, exclusive=True, group="llm-check")
+    def _check_openrouter(self) -> None:
+        try:
+            response = OpenRouterClient(self.app.settings).check_connection()
+        except (LLMConfigurationError, LLMResponseError, OpenAIError) as error:
+            self.app.call_from_thread(
+                self._show_openrouter_result,
+                False,
+                f"{type(error).__name__}: {error}",
+            )
+            return
+        self.app.call_from_thread(self._show_openrouter_result, True, response)
+
+    def _show_openrouter_result(self, succeeded: bool, detail: str) -> None:
+        result = self.query_one("#llm-check-result", Static)
+        if succeeded:
+            result.update(
+                f"[green]connected[/]  {self.app.settings.openrouter_model} "
+                f"via {self.app.settings.openrouter_provider} · {detail}"
+            )
+            self.app.notify("OpenRouter connection succeeded")
+            return
+        result.update(f"[red]OpenRouter check failed[/]  {detail}")
+        self.app.notify("OpenRouter connection failed", severity="error")

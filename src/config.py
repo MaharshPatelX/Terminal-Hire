@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import Literal
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -26,7 +28,15 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    llm_provider: str = "lmstudio"
+    llm_provider: Literal["lmstudio", "openrouter", "off"] = "lmstudio"
+    openrouter_api_key: SecretStr | None = None
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    openrouter_model: str = "qwen/qwen3.6-35b-a3b"
+    openrouter_provider: str = "venice"
+    openrouter_allow_fallbacks: bool = False
+    openrouter_http_referer: str | None = None
+    openrouter_app_title: str | None = "Terminal-Hire"
+    openrouter_timeout_seconds: float = 60.0
     application_dry_run: bool = True
     application_submission_enabled: bool = False
     playwright_headless: bool = False
