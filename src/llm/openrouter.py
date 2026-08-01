@@ -40,6 +40,10 @@ class OpenRouterClient:
         self.model = settings.openrouter_model.strip()
         if not self.model:
             raise LLMConfigurationError("OPENROUTER_MODEL cannot be empty")
+        self.provider = settings.openrouter_provider.strip()
+        if not self.provider:
+            raise LLMConfigurationError("OPENROUTER_PROVIDER cannot be empty")
+        self.allow_fallbacks = settings.openrouter_allow_fallbacks
         self.http_referer = (settings.openrouter_http_referer or "").strip()
         self.app_title = (settings.openrouter_app_title or "").strip()
         self._client = client or OpenAI(
@@ -78,7 +82,12 @@ class OpenRouterClient:
 
         completion = self._client.chat.completions.create(
             extra_headers=self._headers(),
-            extra_body={},
+            extra_body={
+                "provider": {
+                    "only": [self.provider],
+                    "allow_fallbacks": self.allow_fallbacks,
+                }
+            },
             model=self.model,
             messages=[{"role": "user", "content": content}],
         )

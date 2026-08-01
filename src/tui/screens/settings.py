@@ -152,7 +152,8 @@ class SettingsScreen(AppScreen):
         result = self.query_one("#llm-check-result", Static)
         if succeeded:
             result.update(
-                f"[green]connected[/]  {self.app.settings.openrouter_model} · {detail}"
+                f"[green]connected[/]  {self.app.settings.openrouter_model} "
+                f"via {self.app.settings.openrouter_provider} · {detail}"
             )
             self.app.notify("OpenRouter connection succeeded")
             return
