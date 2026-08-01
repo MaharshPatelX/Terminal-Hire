@@ -71,7 +71,7 @@ class FooterHints(Static):
     def __init__(self, hints: str | None = None, **kwargs) -> None:
         super().__init__(id="footer-hints", **kwargs)
         self._hints = hints or (
-            "[bold cyan]1-6[/] screens  "
+            "[bold cyan]1-4[/] screens  "
             "[bold cyan]esc[/] home  "
             "[bold cyan]ctrl+q[/] quit  "
             "[bold cyan]/[/] command"

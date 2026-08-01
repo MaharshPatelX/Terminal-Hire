@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from textual.app import ComposeResult
+from textual.css.query import NoMatches
 from textual.screen import Screen
 from textual.widgets import Footer
 
@@ -35,7 +36,7 @@ class AppScreen(Screen):
         app = self.app
         try:
             strip = self.query_one(StatusStrip)
-        except Exception:
+        except NoMatches:
             return
         settings = getattr(app, "settings", None)
         if settings is None:

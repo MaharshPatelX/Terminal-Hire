@@ -393,3 +393,34 @@ ListView {
     border: round #484f58;
     height: 1fr;
 }
+
+#profile-layout,
+#apps-layout {
+    width: 100%;
+    height: 1fr;
+}
+
+#profile-editor {
+    width: 52%;
+    height: 100%;
+}
+
+#profile-preview {
+    width: 1fr;
+    height: 100%;
+    margin: 0 1 1 0;
+}
+
+#apps-list-panel {
+    width: 52%;
+    height: 100%;
+}
+
+#application-review {
+    width: 1fr;
+    height: 100%;
+    margin: 0 1 1 0;
+    padding: 1;
+    border: round #484f58;
+    background: $panel;
+}
