@@ -2,4 +2,4 @@
 
 from .widgets import FooterHints, StatusStrip, TopBar
 
-__all__ = ["TopBar", "StatusStrip", "FooterHints"]
+__all__ = ["FooterHints", "StatusStrip", "TopBar"]

@@ -1,10 +1,10 @@
 # Terminal-Hire — System Architecture (Python + Local LLM)
 
-Status: planning  
+Status: active implementation blueprint
 Language: **Python only**  
 LLM: **LM Studio (local)** and/or **OpenRouter** — both via **OpenAI-compatible API**, switchable  
 Agent design reference: **Grok Build** (open-source patterns only — **not** a runtime dependency)  
-Last updated: 2026-07-26
+Last updated: 2026-07-27
 
 This document is the **active build blueprint** (modules, **TUI**, LLM switch, M0–M8).  
 [`PROJECT.md`](./PROJECT.md) is the aligned **full product/requirements plan** (US scope, profile packs, data model, safety, MVP vs future).  
@@ -28,10 +28,12 @@ If docs disagree on stack or MVP order, update both — this file wins for imple
 4. **Grok Build is a blueprint, not a dependency**.
 5. **Inference is OpenAI-standard and pluggable** — `LLM_PROVIDER=lmstudio|openrouter|off`.
 6. **Playwright owns the browser** — model proposes; Python executes under gates.
-7. **Facts are structured; RAG is search** — SQLite wins; vectors never invent facts.
+7. **`PROFILE.md` is profile truth** — strict fields plus readable professional narrative and portal Q&A.
 8. **Profile packs** — core US apply for everyone; STEM OPT / H-1B / etc. only if enabled.
-9. **Dry-run by default** — pause on site OTP / CAPTCHA / unknown (OTP ≠ OPT).
-10. **Never fabricate** work history, work-auth, salary, or demographics.
+9. **Deterministic before Agentic RAG** — exact local fields, then non-sensitive retrieval, then ask.
+10. **SQLite is application memory** — plaintext site credentials by explicit policy, events, checkpoints, and evidence.
+11. **Supervised submit only** — disabled by default, exact preview approval, one-use click, no blind retry.
+12. **Never fabricate** work history, work-auth, salary, or demographics.
 
 ---
 
@@ -40,7 +42,7 @@ If docs disagree on stack or MVP order, update both — this file wins for imple
 ```text
 ┌─────────────────────────────────────────────────────────────┐
 │              Python TUI (Textual) — primary UI               │
-│  Home | Onboard | Profile | Resume | Apply | Apps | Settings│
+│ First run: Onboard | Ready: Profile | Apply | Apps | Settings│
 └───────────────┬─────────────────────────────┬───────────────┘
                 │                             │
                 v                             v
@@ -54,7 +56,7 @@ If docs disagree on stack or MVP order, update both — this file wins for imple
 │  • onboarder / mapper     │   │  4. fill from verified facts│
 │  • coach roles            │   │  5. pause OTP/CAPTCHA/ask   │
 └─────────────┬─────────────┘   │  6. preview → approve       │
-              │                 │  7. submit (future flag)    │
+              │                 │  7. one-use submit gate     │
               │                 └──────────────┬──────────────┘
               v                                v
 ┌───────────────────────────┐   ┌─────────────────────────────┐
@@ -67,7 +69,7 @@ If docs disagree on stack or MVP order, update both — this file wins for imple
               v
 ┌───────────────────────────┐
 │  Local data plane         │
-│  SQLite · files · Chroma  │
+│ PROFILE.md · SQLite · files│
 └───────────────────────────┘
 ```
 
@@ -141,7 +143,7 @@ def make_llm_client(settings) -> OpenAI | None:
 - LM Studio: id shown in the local server UI for the loaded model.
 - OpenRouter: slug like `openai/gpt-4.1-mini` or `anthropic/claude-sonnet-4` (whatever you pick in their catalog).
 
-**Privacy note:** with `lmstudio`, profile text stays on your machine. with `openrouter`, prompts/facts you send leave your machine — still redact secrets in logs; avoid sending full resume blobs unless needed.
+**Privacy note:** with `lmstudio`, selected context stays on your machine. With `openrouter`, selected context leaves the machine. Never send the full profile, SSN/document values, passwords, OTPs, or raw restricted answers; only minimal non-sensitive chunks may enter model context.
 
 **Tool-calling strategy:**
 
@@ -155,16 +157,15 @@ def make_llm_client(settings) -> OpenAI | None:
 ### Phase A — First-time setup
 
 ```text
-python -m terminal_hire          # opens TUI → Onboard screen
+terminal-hire                    # missing/incomplete PROFILE.md → Onboard
 
 Confirm US job-search scope.
-Collect CORE facts (identity, contact, education, work, skills, US location, salary, policies).
+Collect CORE facts, professional history, optional SSN/document numbers, documents, and policies.
 Ask which work-auth PACKS to enable (citizen / PR / other / OPT / STEM OPT / …).
 Ask pack-specific questions ONLY for enabled packs.
 
-Each answer → draft fact in SQLite → you verify → embed to Chroma if enabled
-
-Resume screen → store .tex → compile PDF → register document
+Each answer → atomic PROFILE.md draft → user reviews → types VERIFY
+Returning launch → Profile | Apply | Applications | Settings
 ```
 
 See `PROJECT.md` §3.1 for pack list. STEM OPT caution applies only if that pack is on.
@@ -173,19 +174,18 @@ OTP on career sites = one-time code (core apply) — not the same as OPT.
 ### Phase B — Apply from career URL
 
 ```text
-TUI → Apply screen → paste URL → Start dry-run
+TUI → Apply screen → paste URL → Start audited application
 
-1. Create application row
-2. Playwright opens URL
-3. Detect ATS vs generic form vs login/CAPTCHA blocker
-4. Save job text + field inventory; embed job
-5. Agent mapper gets inventory + core + enabled-pack facts (+ RAG)
-   → returns fill plan JSON
-6. Orchestrator fills only verified / policy-approved values
-7. Preview on Apps screen → waiting_for_user_review
-8. User Approve
-9. Site OTP (one-time code) → waiting_for_otp → enter code in TUI
-10. Submit only if APPLICATION_SUBMISSION_ENABLED=true
+1. Snapshot PROFILE.md hash and create SQLite application row
+2. Playwright opens URL; saved site credentials support login/account creation
+3. Pause for consent, CAPTCHA, or site OTP
+4. Inventory fields
+5. Resolve exact profile fields → reusable Q&A/search → minimal agent context → ask user
+6. Fill one field at a time; save events, confidence, screenshots, and checkpoints
+7. Preview values + sources + evidence on Applications screen
+8. User approves the exact preview hash
+9. If enabled, atomically consume approval and click Submit once
+10. Capture confirmation; ambiguous result stops without retry
 ```
 
 Detail: [`FLOW.md`](./FLOW.md).
@@ -194,60 +194,55 @@ Detail: [`FLOW.md`](./FLOW.md).
 ## 5. Modules (Python package layout)
 
 ```text
-terminal_hire/
+Terminal-Hire/
   pyproject.toml
   docs/                           # FLOW, SYSTEM_ARCHITECTURE, PROJECT
-  src/terminal_hire/
+  src/
     __main__.py                       # launches TUI by default
     app.py                            # Textual App
     tui/                              # screens & widgets only
       home.py
       onboard.py
       profile.py
-      resume.py
       apply.py
       apps.py
       settings.py
     config.py                         # pydantic-settings
-    db/                               # SQLite models/repos
-    profile/                          # facts, packs, verify, policies
-    resume/                           # LaTeX → PDF
-    rag/                              # Chroma + embeddings
-    llm/
-      openai_client.py                # OpenAI SDK factory → LM Studio or OpenRouter
-      providers.py
-      schemas.py
-    agent/
-      runtime.py
-      permissions.py
-      roles/
-      tools/
-    browser/
-    apply/                            # orchestrator + gates
-  data/
+    profile/                          # PROFILE.md model/repository/retrieval
+    db/                               # credentials + application audit
+    browser/                          # Playwright + artifacts + submit click
+    apply/                            # profile-backed orchestration + gates
   tests/
 ```
+
+Runtime files are not kept under the repository. Windows defaults to `%LOCALAPPDATA%\TUI-Hire`.
 
 Optional thin CLI (`typer`) may wrap the same services for scripting; **TUI is the product UI**.
 
 ---
 
-## 6. Data model (SQLite first)
+## 6. Local data model
+
+### `PROFILE.md`
+
+The only profile source of truth: metadata, identity/contact, sensitive identity, location, professional summary, education, work history, projects, skills, work authorization/packs, documents, common answers, portal Q&A, policies, insights, verification, and provenance.
+
+Strict YAML front matter is machine-authoritative; the Markdown body is a readable rendering. Writes validate, replace atomically, and retain one backup.
+
+### SQLite
 
 | Table | Purpose |
 |---|---|
-| `profile` | Single-user metadata + `enabled_packs` + market=`US` |
-| `profile_facts` | Versioned facts + verification (+ optional `pack_id`) |
-| `answer_policies` | e.g. demographics = decline |
-| `documents` | `.tex` + PDF paths |
-| `jobs` | URL, title, company, raw text |
-| `applications` | status, preview hash |
-| `application_events` | audit |
-| `form_snapshots` | field inventory JSON |
-| `field_mappings` | agent plan + results |
-| `blockers` | OTP, CAPTCHA, unknown, consent |
+| `credentials` | Domain account + plaintext password by explicit policy |
+| `runtime_settings` | Persist local submit-policy switch |
+| `applications` | URL, status, PROFILE.md hash, preview hash |
+| `application_events` | Ordered redacted audit trail |
+| `field_actions` | Value/hash, source, confidence, sensitivity, result |
+| `browser_checkpoints` | Resume step, URL, safe state JSON |
+| `artifacts` | Redacted screenshot/evidence paths |
+| `submit_approvals` | Preview-bound one-use approval |
 
-Statuses: `ready_to_apply` → `applying` → `waiting_for_user_review` | `waiting_for_otp` | `blocked_by_captcha` | `failed` → `submitted` (future).
+Statuses include `ready_to_apply`, `applying`, `waiting_for_user_answer`, `waiting_for_otp`, `blocked_by_captcha`, `waiting_for_user_review`, `approved`, `submitting`, `submitted`, `submission_uncertain`, and `cancelled`.
 
 ---
 
@@ -271,8 +266,8 @@ while turns < max:
 
 | Role | Job | Tools |
 |---|---|---|
-| `onboarder` | Interview → structured facts | save_draft_fact, list_facts |
-| `form_mapper` | Inventory → fill plan JSON | get_facts, rag_search (read-only) |
+| `onboarder` | Interview → PROFILE.md draft | save_profile_draft, read_profile |
+| `form_mapper` | Inventory → fill plan JSON | exact_profile_lookup, profile_search (read-only) |
 | `coach` | Explain blockers | read-only |
 
 ### 7.3 Contract with Playwright
@@ -302,31 +297,32 @@ Best-effort, not magic:
 
 1. Detect known ATS when possible  
 2. Else generic DOM field inventory  
-3. Login / CAPTCHA → hard pause (never bypass)  
-4. Resume = compiled PDF from LaTeX  
-5. OTP = pause + CLI `otp` command; SMS always manual  
+3. Saved credentials fill login/account fields; consent and CAPTCHA pause
+4. Resume/document path comes from PROFILE.md
+5. OTP pauses for TUI entry and is never persisted
+6. Every fill/click records an event, redacted screenshot, and checkpoint
 
 ---
 
 ## 9. RAG (local)
 
-- Embed verified profile chunks, job text, past Q&A  
-- Chroma (or LanceDB) + local embeddings (LM Studio embeddings endpoint **or** `fastembed`)  
-- RAG feeds the mapper as context; **exact SQLite facts win** for email/phone/dates/immigration  
+- Index only non-sensitive verified professional chunks and portal Q&A
+- The index is disposable and rebuilt from PROFILE.md
+- Exact PROFILE.md fields win; SSN/document numbers never enter RAG or cloud prompts
 
 ---
 
 ## 10. Safety gates
 
-1. Dry-run / submit flag off → stop after preview  
-2. Required fields from verified facts or explicit user answers only  
+1. Submission setting explicitly enabled
+2. Required fields from verified profile data or explicit user answers only
 3. No open CAPTCHA / unknown / consent  
 4. OTP done if required  
 5. Preview hash matches approval  
-6. Daily limit  
-7. URL still matches  
+6. Approval atomically claimed once before click
+7. URL still matches; ambiguous result is never retried
 
-No CAPTCHA bypass. Redact secrets from logs/screenshots.
+No CAPTCHA bypass. Password/OTP/sensitive identity values are redacted from logs and screenshots.
 
 ---
 
@@ -336,15 +332,14 @@ Primary app screens (see [`FLOW.md`](./FLOW.md) for full flows):
 
 | Screen | Actions |
 |---|---|
-| Home | Readiness, recent apps, blockers |
-| Onboard | Agent interview, verify facts, pick packs |
-| Profile | Facts + enable/disable packs |
-| Resume | Add `.tex`, build PDF |
-| Apply | Paste URL, start dry-run, live progress |
-| Apps | Status list, preview, Approve, enter site OTP, Cancel, Resume |
-| Settings | LLM provider switch, models, dry-run/submit flags, paths |
+| Onboard | Forced first-run interview, atomic drafts, review, verify |
+| Home | Ready-state launchpad and readiness |
+| Profile | All details, SSN/docs, history, packs, documents, reusable Q&A |
+| Apply | URL, credentials, OTP, field retrieval, audited browser fill |
+| Applications | Values/sources/evidence, approve, one supervised Submit click |
+| Settings | LLM provider, OS-local paths, submit policy |
 
-Entry: `python -m terminal_hire` → Textual TUI.  
+Entry: `terminal-hire` or `python -m src` → Textual TUI.
 Optional later: scripted service calls for automation — not required for MVP.
 ---
 
@@ -355,10 +350,11 @@ APPLICATION_DRY_RUN=true
 APPLICATION_SUBMISSION_ENABLED=false
 APPLICATION_DAILY_LIMIT=5
 
-DATABASE_URL=sqlite:///./data/terminal_hire.sqlite
-CHROMA_PATH=./data/chroma
-RESUME_DIR=./data/resumes
-ARTIFACT_DIR=./data/artifacts
+# Defaults outside repository/OneDrive:
+# DATA_DIR=C:\Users\you\AppData\Local\TUI-Hire
+PROFILE_FILENAME=PROFILE.md
+DATABASE_FILENAME=terminal_hire.sqlite
+ARTIFACT_DIRNAME=artifacts
 
 # Which brain is on: lmstudio | openrouter | off
 LLM_PROVIDER=lmstudio
@@ -398,34 +394,29 @@ EMAIL_OTP_ENABLED=false
 
 ## 13. Build milestones
 
-### M0 — Decisions
+### M0 — Textual shell and decisions (implemented)
 
-- Default provider: LM Studio vs OpenRouter for day-to-day  
-- LM Studio model id (local) and/or OpenRouter model slug  
-- Confirm LaTeX toolchain on Windows  
-- Submit stays disabled  
+### M1 — PROFILE.md + onboarding (foundation implemented)
 
-### M1 — Skeleton + profile store
+- Strict model/parser, readable rendering, atomic write, backup recovery, hash
+- Forced first-run onboarding, four-item ready navigation, profile/Q&A editor
+- Deterministic exact and lexical retrieval with sensitive-context exclusion
 
-- Package, Textual app shell, SQLite, config with `LLM_PROVIDER` + both provider blocks  
-- Settings screen: provider switch + connection check  
-- Manual fact save/list/verify in Profile  
+### M2 — SQLite application audit + supervised apply (foundation implemented)
 
-### M2 — Our agent runtime + onboard
-
-- Minimal Grok-inspired loop + OpenAI client factory (LM Studio **or** OpenRouter)  
-- Onboard **TUI screen** interview → draft facts → verify + packs  
-- Optional Chroma embed  
+- Plaintext site credentials by explicit policy, events, field actions, checkpoints, artifacts
+- Playwright login/account/OTP/inventory/fill and screenshot evidence
+- Preview hash, one-use approval, one-click supervised submit
 
 ### M3 — LaTeX → PDF  
 
-### M4 — Playwright URL inventory (no submit)  
+### M4 — Harden Playwright with ATS/synthetic fixtures
 
-### M5 — Form mapper + dry-run fill + approve  
+### M5 — OpenAI-compatible agent + disposable non-sensitive RAG
 
-### M6 — OTP / CAPTCHA pause + resume  
+### M6 — Browser restart recovery + ATS adapters
 
-### M7 — Supervised submit (optional)  
+### M7 — Supervised-submit security/soak hardening
 
 ### M8 — ATS collectors, email OTP, etc.  
 
@@ -433,16 +424,16 @@ EMAIL_OTP_ENABLED=false
 
 ## 14. Build first this week
 
-1. Python + Textual shell + SQLite profile  
-2. OpenAI client factory → LM Studio **and** OpenRouter (Settings check)  
-3. Tiny agent loop + Onboard screen  
-4. Apply screen URL inventory only  
+1. Synthetic browser fixtures for login, account creation, OTP, form fill, and submit
+2. OpenAI client factory → LM Studio and OpenRouter
+3. Minimal-context agent mapper + local non-sensitive index
+4. LaTeX/PDF document build and hashing
 
 ---
 
 ## 15. Relationship to `PROJECT.md`
 
-Both docs are aligned (2026-07-26):
+All docs are aligned (2026-07-27):
 
 | Doc | Role |
 |---|---|
@@ -450,7 +441,7 @@ Both docs are aligned (2026-07-26):
 | `FLOW.md` | End-to-end TUI + apply flows |
 | `PROJECT.md` | Full requirements: US scope, profile packs, data model, safety, MVP vs future |
 
-Shared decisions: Python, URL-first MVP, SQLite, Grok Build as reference only, LM Studio ↔ OpenRouter, dry-run/OTP/CAPTCHA rules.
+Shared decisions: Python, URL-first flow, PROFILE.md truth, SQLite application audit, plaintext local credentials, deterministic-before-RAG retrieval, supervised one-use submit, and OTP/CAPTCHA/consent pauses.
 
 ---
 
@@ -462,17 +453,15 @@ Shared decisions: Python, URL-first MVP, SQLite, Grok Build as reference only, L
 4. Default work-auth packs at onboard (usually none until user picks)?  
 5. LaTeX engine on your PC?  
 6. Headful Playwright while developing?  
-7. Always per-application approve for submit?  
+7. Retention period for application screenshots and events?
 
 ---
 
-## 17. Done enough to code when we agree
+## 17. Implemented foundation
 
-- URL-first flow + **Textual TUI**  
-- **Own Python agent** inspired by Grok Build  
-- **LM Studio + OpenRouter**, same OpenAI client, `LLM_PROVIDER` switch  
-- SQLite + optional Chroma  
-- Milestone order M1→M5  
-- Flows documented in `FLOW.md`  
-
-Then start M1 in a coding chat (this chat can stay planning until you say go).
+- URL-first Textual TUI with forced onboarding and four ready-state screens
+- PROFILE.md source of truth with recovery and deterministic retrieval
+- SQLite application/credential/audit storage
+- Playwright worker with redacted evidence and human blockers
+- Preview-bound, one-use supervised-submit gate
+- Automated profile, storage, submit-gate, and TUI routing tests

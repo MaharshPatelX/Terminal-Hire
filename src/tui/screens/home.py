@@ -6,6 +6,8 @@ bottom composer while keeping a distinct TUI-Hire identity.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from textual import events
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -65,7 +67,7 @@ class MenuRow(Horizontal):
 class WelcomeScreen(Screen):
     """Full welcome workspace with launchpad, readiness, and composer."""
 
-    BINDINGS = [
+    BINDINGS: ClassVar[list[Binding]] = [
         Binding("up", "menu_up", "Up", show=False, priority=True),
         Binding("down", "menu_down", "Down", show=False, priority=True),
         Binding("enter", "menu_enter", "Open", show=False),
@@ -81,8 +83,7 @@ class WelcomeScreen(Screen):
             )
             yield Static("", id="workspace-runtime")
 
-        with Vertical(id="welcome-main"):
-            with Horizontal(id="welcome-card"):
+        with Vertical(id="welcome-main"), Horizontal(id="welcome-card"):
                 with Vertical(id="identity-pane"):
                     yield Static(">_", id="brand-glyph")
                     yield Static(BRAND, id="brand-name")
@@ -90,7 +91,7 @@ class WelcomeScreen(Screen):
                     yield Static(TAGLINE, id="brand-copy")
                     yield Static(
                         "[bold #63e6be]LOCAL-FIRST[/]\n"
-                        "[dim]Verified facts only\nSubmit locked by default[/]",
+                        "[dim]PROFILE.md truth\nSupervised submit only[/]",
                         id="brand-policy",
                     )
 
@@ -124,8 +125,8 @@ class WelcomeScreen(Screen):
 
         with Vertical(id="composer-shell"):
             yield Static(
-                "[dim]Tip:[/] [#63e6be]/onboard[/] builds your profile; "
-                "[#63e6be]/apply[/] opens the URL workflow.",
+                "[dim]Tip:[/] [#63e6be]/profile[/] updates your truth; "
+                "[#63e6be]/apply[/] starts an audited application.",
                 id="composer-tip",
             )
             yield WelcomePrompt(placeholder=PROMPT_HINT, id="welcome-prompt")
@@ -158,21 +159,26 @@ class WelcomeScreen(Screen):
         settings = self.app.settings
         provider = settings.llm_provider
         provider_color = "#63e6be" if provider != "off" else "#8b949e"
+        submit = "enabled" if settings.application_submission_enabled else "locked"
         self.query_one("#workspace-runtime", Static).update(
             f"[dim]provider[/] [bold {provider_color}]{provider}[/]  "
-            f"[dim]· dry-run[/] [bold #63e6be]on[/]"
+            f"[dim]· submit[/] [bold #63e6be]{submit}[/]"
         )
         self.query_one("#readiness-provider", Static).update(
             f"[{provider_color}]●[/]  LLM      [bold]{provider}[/]"
         )
+        profile = self.app.profile_service.load_or_new()
+        profile_state = "verified" if profile.is_ready else "needs review"
+        profile_color = "#63e6be" if profile.is_ready else "#d29922"
         self.query_one("#readiness-profile", Static).update(
-            "[#d29922]○[/]  Profile  [dim]setup needed[/]"
+            f"[{profile_color}]●[/]  Profile  [bold]{profile_state}[/]"
         )
+        active_documents = sum(document.active for document in profile.documents)
         self.query_one("#readiness-resume", Static).update(
-            "[#8b949e]○[/]  Resume   [dim]not built[/]"
+            f"[#8b949e]○[/]  Docs     [dim]{active_documents} active[/]"
         )
         self.query_one("#readiness-safety", Static).update(
-            "[#63e6be]●[/]  Safety   [bold]dry-run[/]"
+            f"[#63e6be]●[/]  Submit   [bold]{submit}[/]"
         )
         packs = getattr(self.app, "enabled_packs", "none")
         self.query_one("#readiness-packs", Static).update(
@@ -221,7 +227,7 @@ class WelcomeScreen(Screen):
             self.app.navigate(SCREEN_HOTKEYS[raw])
             return
         self.app.notify(
-            "Agent chat arrives in M2. Use /onboard, /apply, or /settings for now.",
+            "Use /profile, /apply, /apps, or /settings.",
             title=BRAND,
             severity="information",
         )

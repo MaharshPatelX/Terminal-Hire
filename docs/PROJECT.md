@@ -1,8 +1,8 @@
 # Terminal-Hire — Project Plan
 
-Status: planning baseline (aligned with active architecture)  
-Last reviewed: 2026-07-26  
-Implementation status: not started  
+Status: active product contract
+Last reviewed: 2026-07-27
+Implementation status: profile/onboarding/audit/apply foundation implemented
 
 **Companion docs**
 
@@ -20,18 +20,19 @@ If the two docs ever disagree on **stack or MVP order**, `SYSTEM_ARCHITECTURE.md
 
 This project is a **local, single-user, Python TUI** system for **US-based job applications** that:
 
-1. Interviews you to build a **verified candidate profile** (core facts + optional packs).
-2. Stores a **LaTeX resume** and compiles it to PDF for uploads.
-3. Accepts a **US career-page / job URL**, opens it with Playwright, maps the form to your facts, and **dry-runs** an application (preview first).
-4. Pauses safely on OTP, CAPTCHA, consent, or unknown questions.
-5. Optionally later: supervised submit, US job-board discovery, scoring, and a richer UI.
+1. Interviews you to create one verified, human-readable **`PROFILE.md`**.
+2. Keeps identity, SSN/document numbers, professional history, documents, policies, insights, and reusable portal Q&A in that file.
+3. Stores site credentials, application state, field actions, events, checkpoints, and artifact paths in local SQLite.
+4. Accepts a US career-page URL, logs in or creates an account with Playwright, requests OTP, and fills one field at a time from profile truth.
+5. Pauses safely on CAPTCHA, consent, low confidence, or unknown questions.
+6. Shows a source-linked final review and allows one supervised Submit click only after explicit approval.
 
 **Scope:** United States roles and application flows only for now (US locations, US remote, or US-hiring career pages). Non-US country flows are out of scope for this phase.
 
 **Work authorization is modular — not everyone needs STEM OPT / H-1B.**  
 A US citizen, green-card holder, and F-1 STEM OPT candidate share the same core apply engine. Immigration-heavy logic lives in **optional profile packs** you turn on only if they apply to you. The system is decision support, not an immigration or employment-law authority: it must not invent status answers or overstate employer sponsorship / E-Verify conclusions.
 
-Long-term goals may include policy-controlled submission and ATS board collection. The **first release stops before live submit**: profile, resume, URL inventory, field mapping, dry-run fill, and review artifacts must work first.
+The first release includes an **opt-in supervised submit**. Submission remains disabled by default and requires a matching preview hash plus a one-use approval. ATS board collection remains future work.
 
 ---
 
@@ -40,26 +41,27 @@ Long-term goals may include policy-controlled submission and ATS board collectio
 ### 2.1 MVP goals (build first)
 
 - **US-only** apply workflow (filter/prefer US jobs; no multi-country product yet).
-- Guided onboard → **core profile** + enable only the **work-auth packs** you need.
-- LaTeX → PDF resume pipeline for career-page uploads.
-- `apply <url>` for US career/application URLs: inventory, map, dry-run fill, preview, approve.
+- Forced first-run onboard → strict Markdown profile + optional work-auth packs.
+- Profile editor for personal data, professional history, documents, policies, and reusable portal Q&A.
+- `apply <url>` for US career/application URLs: login/account creation, OTP pause, inventory, map, fill, evidence, preview, approve, and one supervised submit.
 - Own agent runtime (Grok Build–inspired); LM Studio ↔ OpenRouter ↔ `off`.
-- Optional Chroma RAG; SQLite source of truth.
+- Exact local profile lookup first; disposable non-sensitive RAG index later.
+- SQLite for credentials and application audit; `PROFILE.md` is profile truth.
 - Pause on unknown / sensitive / CAPTCHA / OTP / consent.
-- No fabricated answers; dry-run latch on.
+- No fabricated answers; submit disabled until explicitly enabled.
 
 ### 2.2 Future goals (after MVP)
 
 - US company/job discovery from approved Greenhouse, Lever, Ashby (etc.) public endpoints.
 - Optional **pack-specific** eligibility helpers (e.g. STEM OPT evidence) — only when that pack is enabled.
 - Explainable matching/scoring for US roles.
-- Dashboard / notifications; email OTP reader; supervised submit.
+- Dashboard / notifications; email OTP reader; ATS-specific adapters.
 - Postgres/queues only if needed.
 - Later exploration: non-US markets as separate locale packs (not in current phase).
 
 ### 2.3 Non-goals for the MVP
 
-- Live application submission.
+- Unreviewed, repeated, or autonomous application submission.
 - Building a product centered on STEM OPT / H-1B for every user.
 - Legal conclusions about immigration, sponsorship, or employment eligibility.
 - Bypassing CAPTCHA, bot detection, auth walls, or site restrictions.
@@ -76,12 +78,13 @@ Long-term goals may include policy-controlled submission and ATS board collectio
 
 The product has four concerns with different trust boundaries:
 
-1. **Profile & documents** — verified facts, policies, LaTeX/PDF (highest sensitivity).
-2. **Agent reasoning** — onboarding, form mapping, coaching via LM Studio or OpenRouter (minimum necessary context only).
-3. **Browser apply** — Playwright against third-party career pages (PII in browser; gated submit).
-4. **Optional later: discovery & scoring** — public job data, evidence, match explanations.
+1. **`PROFILE.md`** — verified facts, SSN/document numbers, policies, documents, and reusable Q&A (highest sensitivity).
+2. **SQLite application store** — plaintext site credentials by explicit policy, application state, events, field actions, checkpoints, and artifact paths.
+3. **Agent reasoning** — onboarding, form mapping, and coaching with minimum necessary non-sensitive context.
+4. **Browser apply** — Playwright against third-party career pages with PII, redacted evidence, and a one-use submit gate.
+5. **Optional later: discovery & scoring** — public job data, evidence, and match explanations.
 
-Modules share one local database but must not give the LLM or browser unrestricted power to rewrite verified facts or submit without gates.
+Runtime data defaults to the OS-local app-data directory outside the repository and OneDrive. Only profile services may rewrite `PROFILE.md`; the LLM cannot verify facts, and the browser cannot submit without a current approval.
 
 ### 3.1 Profile parts: core US apply + optional work-auth packs
 
@@ -138,7 +141,7 @@ If/when this pack’s eligibility helper exists, store independent evidence and 
 - **US-only phase:** remote-US / US-located / US-hiring pages; do not build multi-country routing yet.
 - **URL-first vs boards:** MVP is paste-a-URL; board crawlers future.
 - **“Any career page”:** best-effort within US ATS/career sites.
-- **Submission consent:** per-application approve for first live release; MVP forced dry-run.
+- **Submission consent:** per-application review and preview-hash approval; one Submit click; no blind retry.
 - **Pack selection:** must be explicit; changing packs re-runs relevant onboard questions.
 - **Sensitive voluntary forms:** `decline_to_answer`, `manual_only`, or verified value.
 - **AI data handling:** lmstudio local vs openrouter cloud; schema-validate; no training on candidate data.
@@ -170,9 +173,10 @@ OpenAI-compatible client
    |---- LLM_PROVIDER=openrouter --> https://openrouter.ai/api/v1
    '---- LLM_PROVIDER=off       --> no model calls
 
-SQLite (facts, jobs, applications, audit)
-Chroma (optional RAG)
-files/ (LaTeX, PDF, artifacts)
+PROFILE.md (profile truth + reusable Q&A)
+SQLite (credentials, jobs, applications, events, checkpoints)
+Disposable local index (optional non-sensitive RAG)
+files/ (documents + redacted artifacts)
 ```
 
 Screen flows: [`FLOW.md`](./FLOW.md). Package layout: `SYSTEM_ARCHITECTURE.md`.
@@ -180,45 +184,45 @@ Screen flows: [`FLOW.md`](./FLOW.md). Package layout: `SYSTEM_ARCHITECTURE.md`.
 ### 4.2 Core decisions
 
 - **Python only** for this product; **Textual TUI** as primary UX.
-- **SQLite first** as source of truth; Postgres optional later.
+- **`PROFILE.md` is the only profile source of truth;** strict YAML front matter plus readable Markdown.
+- **SQLite** stores plaintext site credentials by explicit policy and all application/audit state; Postgres is optional later.
 - **In-process orchestration** for MVP; Redis/BullMQ only if needed later.
 - **Own agent runtime** inspired by Grok Build; no `grok` / `xg-agent-sdk` requirement.
 - **LLM_PROVIDER switch:** `lmstudio` | `openrouter` | `off` — one OpenAI SDK factory.
 - **Playwright** for browser; model returns fill **plans**; Python executes under gates.
+- **Retrieval order:** exact structured lookup → local search/RAG → minimal agent context → ask the user.
+- **Sensitive profile fields:** deterministic local lookup only; never RAG or cloud-model context.
 - **Rules + verified facts before model guesses;** model never auto-verifies facts or submits.
-- **Dry-run latch:** `APPLICATION_SUBMISSION_ENABLED=false` plus explicit approve before any future submit.
+- **Submit latch:** disabled by default; current preview hash + explicit approval + one-use claim before one click.
 - **URL-first apply;** ATS board connectors deferred.
 
 ### 4.3 Trust boundaries
 
 | Component | Public job/page data | Candidate PII | Secrets | Browser state | Can submit |
 |---|---:|---:|---:|---:|---:|
-| TUI / orchestrator | Yes | Yes | Via config refs | No | Policy only (future) |
+| TUI / orchestrator | Yes | Yes | Session-only display | No | Grants one-use approval |
 | Agent runtime + LLM | Redacted/minimal | Minimal projection | Provider key if OpenRouter | No | No |
-| Profile/DB layer | Metadata | Yes (encrypted where needed) | Field keys | No | No |
-| Playwright worker | Selected page | Minimum required | Runtime-injected | Yes | Future policy only |
+| `PROFILE.md` service | No | Yes, including SSN/docs | No credentials | No | No |
+| SQLite store | Metadata | Application values | Plaintext site credentials | Checkpoints | Claims one-use gate |
+| Playwright worker | Selected page | Minimum required | Runtime-injected | Yes | One click after claimed approval |
 | Future collectors | Read/write public | No | Source-specific only | No | No |
 
 ---
 
 ## 5. Modules and responsibilities
 
-Names map to Python packages under `src/terminal_hire/` (see §12 and `SYSTEM_ARCHITECTURE.md`).
+Names map to Python packages directly under `src/` (see §12 and `SYSTEM_ARCHITECTURE.md`).
 
 ### 5.1 MVP modules
 
 #### `profile`
 
-- Versioned facts and answer policies; explicit verification for apply-eligible facts.
+- Strict `PROFILE.md` parser, validator, atomic writer, backup recovery, and content hash.
+- Personal details, professional history, SSN/document numbers, answer policies, insights, and reusable portal Q&A.
 - **Enabled packs** list on the profile (e.g. `US_CITIZEN`, `STEM_OPT`).
 - Pack-specific onboard questions only when enabled.
-- Document metadata; LaTeX + PDF paths.
+- Resume/document metadata and paths.
 - Model output never auto-verifies facts.
-
-#### `resume`
-
-- Store `.tex`; compile to PDF (tectonic / latexmk / MiKTeX).
-- Register primary PDF for upload fields.
 
 #### `llm`
 
@@ -234,21 +238,21 @@ Names map to Python packages under `src/terminal_hire/` (see §12 and `SYSTEM_AR
 
 #### `rag` (optional early, required useful by mapper polish)
 
-- Embed verified chunks, job text, past Q&A into Chroma.
-- Exact SQLite facts always win for email/phone/dates/immigration.
+- Build a disposable index from non-sensitive verified profile chunks and portal Q&A.
+- Exact `PROFILE.md` lookup always wins; SSN/document values never enter the index.
 
 #### `browser`
 
-- Playwright open URL, detect login/CAPTCHA/OTP, inventory fields, fill, upload PDF, capture redacted artifacts.
-- Network guard: no submit in MVP.
+- Playwright open URL, login/account creation, OTP/CAPTCHA/consent pause, field inventory/fill, and redacted screenshots.
+- Consume a matching one-use approval before exactly one Submit click; ambiguous results are never retried.
 
 #### `apply`
 
-- Application state machine, preview hash, approve, OTP inject, gates.
+- Application state, profile snapshot hash, field sources/confidence, preview hash, approve, OTP inject, and one-use submit gates.
 
 #### `tui`
 
-- Textual screens: Home, Onboard, Profile, Resume, Apply, Apps, Settings.
+- First launch: Onboard. Ready navigation: Profile, Apply, Applications, Settings.
 - No business logic in widgets — call `profile` / `apply` / `llm` services.
 - Full flows in [`FLOW.md`](./FLOW.md).
 
@@ -280,34 +284,34 @@ Initial future order if/when enabled: Greenhouse public Job Board API → Lever 
 
 ## 7. Data model
 
-**MVP store:** SQLite (JSON columns where useful). **Later:** Postgres if needed. Use UUID PKs, UTC timestamps, enums/checks, `created_at`/`updated_at`, version columns for user-edited rows. Encrypt highly sensitive values at the application layer. Large artifacts live as files under `data/` (or encrypted object storage later).
+Runtime data defaults to the OS-local app-data directory, outside the repository and synced workspace.
 
-### 7.1 MVP tables (implement first)
+### 7.1 `PROFILE.md` (only profile source of truth)
 
-#### `candidate_profiles`
+Strict YAML front matter provides machine-safe values; generated Markdown sections provide a readable professional record. Atomic replacement and one backup protect updates.
 
-- `id`, `display_name`, `status`, `timezone`, `locale`
-- `target_market`: `US` (fixed for this phase)
-- `enabled_packs` JSON list (e.g. `["US_CITIZEN"]` or `["F1_OPT","STEM_OPT"]`)
-- `submission_policy`, `profile_version`, timestamps
+- metadata: schema version, draft/complete status, timestamps, verification
+- identity/contact and structured location
+- `sensitive_identity`: SSN and government-document numbers
+- professional summary, education, work history, projects, and skills
+- work authorization and enabled packs
+- documents/resume paths and hashes
+- common answers, answer policies, user insights, verification, and provenance
+- portal Q&A: normalized intent, observed wording, answer, scope, company, verification, and usage timestamps
 
-#### `profile_facts`
+Sensitive identity is available only to deterministic local mapping. It is excluded from RAG and cloud-model context.
 
-- `id`, `profile_id`, `category`, `field_key`
-- optional `pack_id` (null = core; else fact belongs to that pack)
-- encrypted or JSON value; `sensitivity`, `verification_status`
-- `verified_at`, `source`, validity window, `allowed_uses`
+### 7.2 SQLite application store
 
-**Core facts:** personal/contact, education, employment, projects, skills, US location prefs, salary, preferences, basic work-auth summary.  
-**Pack facts:** only when that pack is enabled (citizenship details, OPT dates, STEM prefs, sponsorship prefs, etc.). Append versions; do not silently overwrite.
+#### `credentials`
 
-#### `answer_policies`
+- one row per domain; email, username, and **plaintext password by explicit product decision**
+- database is OS-local and restricted to the current user where the platform allows
+- password values never enter events, screenshots, model context, or `PROFILE.md`
 
-- `question_key` / pattern; `policy`: `verified_answer | decline | manual_only | never_answer`
+#### `runtime_settings`
 
-#### `documents`
-
-- `document_type`, `label`, paths for `.tex` / PDF, `sha256`, `mime_type`, `role_tags`, `active`
+- persisted local switches such as supervised-submit enablement
 
 #### `jobs`
 
@@ -315,20 +319,24 @@ Initial future order if/when enabled: Greenhouse public Job Board API → Lever 
 
 #### `applications`
 
-- `profile_id`, `job_id`, `status`, `status_reason`
-- `selected_document_id`, `application_url`, `preview_hash`
-- `idempotency_key`, attempt counters, `external_application_id`, `submitted_at`
-- Unique `(profile_id, job_id)` when job id exists; for pure URL applies use stable URL hash identity.
+- URL/company, status, exact `PROFILE.md` content hash, preview hash, timestamps
 
-#### `application_attempts` / `form_snapshots` / `field_mappings`
+#### `field_actions` / `application_events`
 
-- Inventory JSON, mapper plan, outcomes, artifact paths, human_action_required
+- field label/question, redacted-or-plain value, value hash, profile source, confidence, outcome
+- ordered click/fill/login/OTP/review/submit events; password, OTP, and sensitive values are redacted
 
-#### `application_status_history` / `blockers` / `audit_events` / `review_tasks`
+#### `browser_checkpoints` / `artifacts`
 
-- Full audit of transitions, OTP/CAPTCHA/unknown blockers, immutable audit log
+- resumable step + URL + state JSON
+- redacted screenshot/artifact paths captured through the application
 
-### 7.2 Future tables (discovery / scoring)
+#### `submit_approvals`
+
+- preview hash, approval time, and consumed time
+- one approval can claim at most one Submit click
+
+### 7.3 Future tables (discovery / scoring)
 
 Keep the earlier rich model as the target when collectors ship:
 
@@ -353,9 +361,14 @@ Persist lowercase machine values; TUI shows friendly labels.
 | Ready to apply | Application | `ready_to_apply` |
 | Applying | Application | `applying` |
 | Waiting for OTP | Application | `waiting_for_otp` |
+| Waiting for an answer | Application | `waiting_for_user_answer` |
 | Waiting for user review | Application | `waiting_for_user_review` |
+| Approved | Application | `approved` |
+| Submitting | Application | `submitting` |
+| Submission uncertain | Application | `submission_uncertain` |
 | Blocked by CAPTCHA | Application | `blocked_by_captcha` |
 | Failed | Application | `failed` |
+| Cancelled | Application | `cancelled` |
 | Submitted | Application | `submitted` |
 | Closed | Job/application | `closed` |
 | Interview / Rejected / Offer | Application | `interview` / `rejected` / `offer` |
@@ -380,67 +393,59 @@ any open state -> closed -> reopened (if observed again)
 ### 8.2 Application lifecycle
 
 ```text
-ready_to_apply -> applying -> waiting_for_user_review -> (approve) -> applying
+ready_to_apply -> applying -> waiting_for_user_answer -> applying
                          | -> waiting_for_otp -> applying
                          | -> blocked_by_captcha -> applying (manual resume)
-                         | -> failed -> ready_to_apply (bounded retry)
-                         \ -> submitted -> interview -> offer
-                                           \-> rejected
+                         | -> waiting_for_user_review -> approved -> submitting
+                         |                                      | -> submitted
+                         |                                      \ -> submission_uncertain
+                         \ -> cancelled
 ```
 
 Every transition is validated and written to `application_status_history` with timestamp, actor, correlation ID, and reason. `submitted` does not return to `applying`.
 
-### 8.3 Submission gates (future live submit)
+### 8.3 Supervised submission gates
 
 All must pass before an irreversible submit click:
 
 1. Env + DB policy allow submission (`APPLICATION_SUBMISSION_ENABLED`).
-2. Daily limit / company allowlist OK.
-3. Not already submitted locally or visibly confirmed remotely.
-4. URL/title/company still match.
-5. Eligibility/match evidence current enough (when matching exists).
-6. Every required answer from verified fact or explicit user answer.
-7. No CAPTCHA, pending OTP, consent, unknown, or validation error.
-8. Preview hash matches user approval.
-9. Short submission lease held.
-
-MVP hard-codes gate 1 to false.
+2. Not already submitted locally or visibly confirmed remotely.
+3. URL/title/company still match.
+4. Every required answer comes from `PROFILE.md` or explicit user input.
+5. No CAPTCHA, pending OTP, consent, unknown, or validation error.
+6. Preview hash matches explicit user approval.
+7. Approval is atomically claimed and consumed before clicking.
+8. Exactly one click is attempted; uncertain outcomes require manual reconciliation.
 
 ---
 
 ## 9. End-to-end workflows
 
-### 9.1 Onboarding (MVP)
+### 9.1 Onboarding
 
-1. `terminal_hire` TUI → Onboard screen starts agent role `onboarder`.
-2. Confirm **US job-search** scope for this profile.
-3. Collect **core** facts: identity, contact, education, work, skills, US location/salary prefs, answer policies.
-4. Ask which **work-auth packs** to enable (citizen / PR / other auth / OPT / STEM OPT / none extra). Skip irrelevant packs entirely.
-5. Run only the question sets for enabled packs; save draft facts → user verifies.
-6. Embed verified chunks if RAG enabled.
-7. Resume screen: add `.tex` / build PDF.
+1. Missing, invalid, incomplete, or unverified `PROFILE.md` routes directly to Onboard.
+2. Collect structured identity/contact/location, professional history, skills, work authorization, optional SSN/document numbers, and resume path.
+3. Save an atomic draft after every answer; never echo sensitive answers.
+4. User reviews the readable file and types `VERIFY`.
+5. Returning launches show only Profile, Apply, Applications, and Settings.
 
-### 9.2 Apply-by-URL dry-run (MVP primary)
+### 9.2 Apply by URL
 
-1. Apply screen: paste URL → creates/links job + application (US market).
-2. Playwright opens URL; stop on login/CAPTCHA/unexpected challenge.
-3. Inventory fields; store snapshot; embed job text optionally.
-4. `form_mapper` uses **core + enabled-pack facts only** (+ RAG); returns validated fill-plan JSON.
-5. Fill/upload PDF only for approved mappings; never invent restricted/work-auth answers.
-6. Preview report → `waiting_for_user_review` (Apps screen).
-7. Apps screen: Approve / enter site OTP / Cancel as needed. (OTP = one-time code, not OPT.)
-8. Stop before submit; prove no submit in tests.
+1. Create an application bound to the current `PROFILE.md` content hash.
+2. Load/save the site credential in SQLite; password is plaintext but excluded from logs.
+3. Playwright opens the URL, fills login/account fields, and pauses for consent, CAPTCHA, or OTP.
+4. Inventory each field. Resolve exact structured data first, reusable Q&A/search second, minimal agent context later, then ask the user.
+5. A confirmed reusable answer updates `PROFILE.md`; one-off answers remain application data.
+6. Fill field by field, recording source, confidence, value hash, event, screenshot, and checkpoint.
+7. Build a preview hash and show values, sources, and evidence in Applications.
+8. User approves that exact preview. If supervised submit is enabled, consume approval and click once.
+9. Capture confirmation; ambiguous result becomes `submission_uncertain` and is never retried automatically.
 
 Detail diagrams: [`FLOW.md`](./FLOW.md).
 
-### 9.3 Future live application
+### 9.3 Future apply improvements
 
-1. Resume from approved dry-run when form fingerprint matches.
-2. Re-map diffs; review changes.
-3. Email OTP only via approved integration; SMS manual.
-4. CAPTCHA → pause only (never solve/bypass).
-5. Run gates → submit once → confirmation artifact → `submitted`.
-6. Ambiguous click → human reconciliation, no blind retry.
+ATS-specific adapters, stronger browser recovery, email OTP integration, document compilation, and semantic RAG improve this same guarded flow without weakening review or submit gates.
 
 ### 9.4 Future discovery / monitoring / matching
 
@@ -464,12 +469,11 @@ Fullscreen Textual app. Screens and flows: [`FLOW.md`](./FLOW.md).
 
 | Screen | Main actions |
 |---|---|
-| Onboard | Interview, verify, packs |
-| Profile | Facts + packs |
-| Resume | `.tex` → PDF |
-| Apply | Paste US URL, dry-run |
-| Apps | Preview, Approve, site OTP, Cancel, Resume |
-| Settings | LLM switch, safety flags |
+| Onboard | Forced first-run interview, atomic draft, review, verify |
+| Profile | All user facts, SSN/docs, history, packs, documents, reusable Q&A |
+| Apply | URL, site credential, OTP, field retrieval, browser fill |
+| Applications | Values/sources/evidence, approve, one supervised Submit click |
+| Settings | LLM switch, local paths, submit policy |
 
 ### 10.2 Optional later: script CLI / REST
 
@@ -500,25 +504,19 @@ terminal_hire/
 │  ├─ adr/
 │  ├─ runbooks/
 │  └─ threat-model/
-├─ src/terminal_hire/
+├─ src/
 │  ├─ __main__.py            # launch TUI
 │  ├─ app.py                 # Textual App
 │  ├─ tui/                   # screens only
 │  ├─ config.py
-│  ├─ db/
-│  ├─ profile/
-│  ├─ resume/
-│  ├─ llm/
-│  ├─ agent/
-│  ├─ rag/
-│  ├─ browser/
-│  └─ apply/
-├─ tests/
-├─ fixtures/
-└─ data/                     # gitignored
+│  ├─ db/                    # credentials + application audit
+│  ├─ profile/               # Markdown model/repository/retrieval
+│  ├─ browser/               # Playwright + evidence + submit click
+│  └─ apply/                 # profile-backed orchestration
+└─ tests/
 ```
 
-Future: `connectors/`, `matcher/`, optional script CLI — after MVP dry-run works.
+Runtime: `%LOCALAPPDATA%\TUI-Hire` on Windows by default (`PROFILE.md`, SQLite, artifacts). Future: `llm/`, `agent/`, `rag/`, `resume/`, connectors, matcher.
 
 ---
 
@@ -529,18 +527,20 @@ Future: `connectors/`, `matcher/`, optional script CLI — after MVP dry-run wor
 - **Public:** job posts, public career URLs.
 - **Internal:** scores (future), ops metadata, fill confidence.
 - **Confidential:** resume content, history, application answers.
-- **Restricted:** contact/address, immigration/work auth, OTP, demographics/disability/veteran, browser sessions, credentials.
+- **Restricted:** SSN/document numbers, contact/address, immigration/work auth, OTP, demographics/disability/veteran, browser sessions, and credentials.
 
 ### 13.2 Controls
 
 - Local-first: prefer LM Studio for sensitive chat; treat OpenRouter as leaving the machine.
-- Application-level encryption for restricted fields; keys not in Git.
+- Runtime files live outside the repository/OneDrive by default and use current-user file permissions where available.
+- `PROFILE.md` intentionally stores SSN/document numbers as local plaintext; these values never enter RAG or cloud prompts.
+- SQLite intentionally stores site passwords as plaintext; display a warning and never duplicate passwords in events or screenshots.
 - `.env` local only; never commit real keys.
-- Redact logs; log ids/hashes/classes, not values.
+- Ordinary application values may be audited; password, OTP, and sensitive identity values are always redacted and hashed where needed.
 - Sanitize stored HTML; strip scripts/tokens.
 - SSRF caution when fetching URLs: block obvious local/metadata targets where practical; cap downloads.
 - Validate resume files (type/size).
-- Audit profile, policy, apply, OTP, approve, and future submit events.
+- Audit profile, policy, apply, OTP, approve, and submit events.
 - Export/delete path for profile + artifacts.
 
 ### 13.3 AI safety
@@ -554,8 +554,8 @@ Future: `connectors/`, `matcher/`, optional script CLI — after MVP dry-run wor
 
 ### 13.4 Artifacts & OTP
 
-- Redact screenshots; strip secrets from HTML snapshots.
-- OTP only in memory / short-TTL encrypted storage; delete after use/expiry; never log.
+- Redact password, OTP, SSN, passport, and license inputs in screenshots; strip secrets from HTML snapshots.
+- OTP stays in memory only; never persist or log it.
 - Suggested defaults: failure artifacts 30 days; confirmations as needed; logs 30 days; audit 1 year; restricted data shortest practical.
 
 ---
@@ -575,7 +575,7 @@ Operational targets: zero duplicate submits, zero invented sensitive answers, co
 
 ### 15.1 Unit
 
-- Fact verification rules; state transitions; submission-gate invariants.
+- PROFILE.md parse/validation/recovery, deterministic and Q&A retrieval, state transitions, and submission-gate invariants.
 - JSON plan schema validation; redaction helpers.
 - Resume compile dry path (mock or CI TeX where available).
 
@@ -588,16 +588,17 @@ Operational targets: zero duplicate submits, zero invented sensitive answers, co
 ### 15.3 Browser
 
 - Local synthetic forms: text, select, checkbox, file upload, multi-step, OTP, CAPTCHA placeholder, confirmation.
-- Intercept network: MVP cannot issue submit requests.
-- Pause/resume, selector drift, crash recovery.
+- Verify submit is impossible without a matching unconsumed approval.
+- Verify one approval permits one click and ambiguous results never retry.
+- Pause/resume, selector drift, crash recovery, and screenshot redaction.
 
 ### 15.4 Acceptance (MVP)
 
-- Onboard can create verified facts without leaking them in logs.
+- Onboard creates a strict verified `PROFILE.md` and masks sensitive answers.
 - LaTeX → PDF registered as document.
-- `apply <url>` on synthetic page inventories fields and produces preview.
+- `apply <url>` on a synthetic page logs in, inventories fields, fills from profile sources, and produces evidence plus preview.
 - CAPTCHA/unknown/OTP pause without automated bypass.
-- Approve + OTP paths work in TUI Apps; submit remains disabled.
+- Applications shows values/sources/artifacts; exact preview approval permits one supervised Submit click when enabled.
 - Switching `LLM_PROVIDER` does not change DB schema or Playwright gates.
 
 ---
@@ -608,7 +609,7 @@ Operational targets: zero duplicate submits, zero invented sensitive answers, co
 
 - Python 3.11+ venv / uv; Playwright browsers installed locally.
 - LM Studio running when `LLM_PROVIDER=lmstudio`; OpenRouter key when using cloud.
-- SQLite + `data/` directory; no Docker required initially.
+- OS-local app-data directory with `PROFILE.md`, SQLite, and artifacts; no Docker required.
 - Synthetic profile/fixtures only in tests.
 
 ### 16.2 Later production-ish
@@ -625,14 +626,14 @@ Aligned with `SYSTEM_ARCHITECTURE.md` (canonical numbering M0–M8):
 
 | Milestone | Focus | Exit |
 |---|---|---|
-| **M0** | Decisions: default LLM provider, model ids, LaTeX engine, submit stays off | Choices recorded |
-| **M1** | Python package, config, SQLite profile facts, `llm-check` / provider switch | Facts save/list/verify |
-| **M2** | Agent runtime + `onboard` via LM Studio/OpenRouter | Profile from interview |
+| **M0** | Python/Textual shell and local-data decisions | Implemented |
+| **M1** | Strict `PROFILE.md`, parser/recovery/retrieval, first-run onboarding, profile editor | Implemented foundation |
+| **M2** | SQLite credentials/audit, application orchestration, evidence, one-use submit gate | Implemented foundation |
 | **M3** | LaTeX → PDF | Uploadable resume |
-| **M4** | Playwright URL inventory (no submit) | Fields stored from URL |
-| **M5** | Form mapper + dry-run fill + approve | E2E dry-run on real pages |
-| **M6** | OTP/CAPTCHA pause + resume | Interrupted applies recoverable |
-| **M7** | Supervised submit (optional) | Explicit approve + flag |
+| **M4** | Harden Playwright inventory/fill/login against ATS fixtures | E2E synthetic and selected real pages |
+| **M5** | LM Studio/OpenRouter agent + disposable non-sensitive RAG | Schema-validated minimal context |
+| **M6** | OTP/CAPTCHA/consent recovery across browser restarts | Interrupted applies recoverable |
+| **M7** | Harden supervised submit | Security review + synthetic confirmation coverage |
 | **M8** | ATS collectors, matching, email OTP, UI, scale-out | As needed |
 
 Older TS/Postgres/dashboard-first milestones are **withdrawn** as the MVP path.
@@ -643,17 +644,17 @@ Older TS/Postgres/dashboard-first milestones are **withdrawn** as the MVP path.
 
 ### MVP
 
-- Single user, one verified profile (TUI onboard).
-- SQLite + files + optional Chroma.
+- Single user, one verified Markdown profile (TUI onboard).
+- SQLite application audit + plaintext site credentials; optional disposable local index.
 - Python **Textual TUI** + agent (Grok Build–inspired) + LM Studio ↔ OpenRouter.
 - LaTeX resume → PDF.
-- URL-first Playwright dry-run; preview; OTP/CAPTCHA pause.
-- No live submit; no CAPTCHA solve; no LinkedIn/Indeed scraping; no required cloud except optional OpenRouter.
+- URL-first Playwright login/fill; preview; OTP/CAPTCHA/consent pause.
+- Opt-in one-click supervised submit; no CAPTCHA solve; no LinkedIn/Indeed scraping; no required cloud except optional OpenRouter.
 
 ### Future
 
 - Greenhouse/Lever/Ashby (then more) collectors; eligibility evidence; scoring dashboard.
-- Email OTP integration; supervised/autopilot submit if desired and permitted.
+- Email OTP integration and stronger supervised-submit recovery; no unreviewed autopilot.
 - Postgres, Redis, multi-process workers, hosted UI.
 - Multiple profiles/users only if needed.
 
@@ -661,13 +662,12 @@ Older TS/Postgres/dashboard-first milestones are **withdrawn** as the MVP path.
 
 ## 19. What should be built first
 
-1. Config + SQLite profile facts + `llm-check` (both providers wired).
-2. Agent runtime + onboard interview.
-3. LaTeX → PDF.
-4. `apply <url>` inventory only.
-5. Mapper + dry-run fill + approve.
-6. OTP/CAPTCHA resume paths.
-7. Only then consider collectors/matching/UI/submit.
+1. Harden the implemented `PROFILE.md`, onboarding, retrieval, and SQLite audit foundation.
+2. Add synthetic Playwright pages for login, account creation, OTP, form fill, and submit confirmation.
+3. Implement the OpenAI-compatible agent with minimal non-sensitive context.
+4. Add a disposable local RAG index for professional narrative and portal Q&A.
+5. Add LaTeX/PDF document build and hashing.
+6. Harden browser restart recovery and ATS-specific selectors.
 
 This matches URL-first product intent while keeping browser automation behind a working profile/LLM spine.
 
@@ -682,11 +682,11 @@ This matches URL-first product intent while keeping browser automation behind a 
 | OpenRouter model | catalog slug | Start with a mid-cost strong JSON model; pin id |
 | Embeddings | LM Studio; fastembed local; OpenRouter | **Local** (`fastembed` or LM Studio) even if chat is OpenRouter |
 | Package/tooling | uv; poetry; pip | `uv` or plain `pyproject.toml` + pip |
-| ORM | SQLModel; SQLAlchemy; raw SQL | SQLModel/SQLAlchemy |
+| ORM | SQLModel; SQLAlchemy; raw SQL | Raw `sqlite3` currently implemented |
 | LaTeX engine | tectonic; MiKTeX; TeX Live | Whatever is installed; document in README |
 | Vector DB | Chroma; LanceDB; none until M5 | Chroma after onboard works; optional until mapper needs it |
 | Submission consent | Per-job; allowlist autopilot | Per-job approve for first live release |
-| Browser profile | Persistent encrypted; ephemeral | Ephemeral first; persistent later if logins required |
+| Browser profile | Persistent; ephemeral | Ephemeral session + SQLite checkpoints currently |
 | Notifications | TUI only; email; desktop | TUI first |
 | UI | Textual TUI; optional script CLI; web later | **Textual TUI** |
 | Retention | Fixed; configurable | Conservative defaults |
@@ -707,7 +707,7 @@ This matches URL-first product intent while keeping browser automation behind a 
 - Never overstate sponsorship / E-Verify / STEM conclusions; unused packs stay silent.
 - OTP means one-time passcode on a site; OPT means Optional Practical Training — keep them separate in UX copy.
 - Clocks UTC; display default `America/Chicago` unless profile overrides.
-- No live submit until MVP dry-run acceptance passes and user enables policy.
+- Supervised submit is disabled by default; user enables policy and approves each exact preview.
 
 ---
 
@@ -725,4 +725,4 @@ This matches URL-first product intent while keeping browser automation behind a 
 
 ## 23. Definition of done for planning
 
-This document, `SYSTEM_ARCHITECTURE.md`, and `FLOW.md` together are the planning baseline (not legal approval). Stack, **TUI**, LLM switch, and milestone order are aligned on the Python URL-first MVP. Before coding M1, resolve §20 items that affect config (default provider, model ids, LaTeX). Material deviations should be recorded (short ADR under `docs/adr/`), and README / `.env.example` must stay consistent.
+This document, `SYSTEM_ARCHITECTURE.md`, and `FLOW.md` are the active product contract (not legal approval). Keep code, README, `.env.example`, storage policy, and submit gates consistent with them.

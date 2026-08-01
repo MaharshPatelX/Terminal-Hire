@@ -2,22 +2,18 @@
 
 from __future__ import annotations
 
-# Number keys 1-6 → screens (FLOW.md)
+# Ready-state number keys 1-4 → screens (Onboarding is a startup gate).
 SCREEN_HOTKEYS = {
-    "1": "onboard",
-    "2": "profile",
-    "3": "resume",
-    "4": "apply",
-    "5": "apps",
-    "6": "settings",
+    "1": "profile",
+    "2": "apply",
+    "3": "apps",
+    "4": "settings",
 }
 
 # (id, label, shortcut)
 MENU_ITEMS: list[tuple[str, str, str]] = [
-    ("onboard", "Onboard", "1"),
-    ("profile", "Profile / Packs", "2"),
-    ("resume", "Resume (LaTeX → PDF)", "3"),
-    ("apply", "Apply by URL", "4"),
-    ("apps", "Applications", "5"),
-    ("settings", "Settings", "6"),
+    ("profile", "Profile", "1"),
+    ("apply", "Apply by URL", "2"),
+    ("apps", "Applications", "3"),
+    ("settings", "Settings", "4"),
 ]

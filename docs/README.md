@@ -1,21 +1,23 @@
 # Terminal-Hire — Documentation
 
-Planning baseline for **Terminal-Hire**: a local Python TUI that helps with **US job applications**. No application code yet.
+Active product and implementation documentation for **TUI-Hire / Terminal-Hire**, a local Python TUI for audited US job applications.
 
 ## Naming
 
 | Use | Value |
 |---|---|
 | Product name | **Terminal-Hire** |
-| Python package | `terminal_hire` |
-| Launch (planned) | `python -m terminal_hire` |
-| Data dir / DB (planned) | `./data/terminal_hire.sqlite` |
+| Python package | `src` |
+| Launch | `uv run terminal-hire` or `uv run python -m src` |
+| Windows data home | `%LOCALAPPDATA%\TUI-Hire` |
+| Profile truth | `PROFILE.md` |
+| Application store | `terminal_hire.sqlite` |
 
 ## Start here
 
 | Doc | Role |
 |---|---|
-| [`FLOW.md`](./FLOW.md) | End-to-end TUI + system flows (product path) |
+| [`FLOW.md`](./FLOW.md) | Current onboarding, retrieval, browser, review, and submit flow |
 | [`SYSTEM_ARCHITECTURE.md`](./SYSTEM_ARCHITECTURE.md) | **Active build blueprint** — modules, TUI, LLM switch, milestones M0–M8 |
 | [`PROJECT.md`](./PROJECT.md) | Full product/requirements plan — US scope, packs, data model, safety, MVP vs future |
 
@@ -30,10 +32,10 @@ Config template: [`../.env.example`](../.env.example)
 |---|---|
 | [`adr/`](./adr/) | Architecture Decision Records for material deviations |
 | [`runbooks/`](./runbooks/) | Operational how-tos (LLM check, dry-run recovery, etc.) |
-| [`threat-model/`](./threat-model/) | Security / privacy threat notes before live submit |
+| [`threat-model/`](./threat-model/) | Security/privacy notes for sensitive local data and supervised submit |
 
 ## Status
 
-- **Phase:** planning (aligned 2026-07-26)
-- **Implementation:** not started
-- **Next:** resolve open decisions (default `LLM_PROVIDER`, model ids, LaTeX engine), then M1
+- **Phase:** implementation (aligned 2026-07-27)
+- **Implemented foundation:** PROFILE.md, onboarding/profile UI, SQLite audit, browser worker, review, one-use submit gate
+- **Next:** synthetic browser fixtures, LLM adapter, non-sensitive local RAG, ATS hardening, document build
