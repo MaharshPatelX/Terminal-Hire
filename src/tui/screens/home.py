@@ -1,8 +1,4 @@
-"""TUI-Hire welcome workspace.
-
-The layout combines a Claude-style split dashboard with a Grok-style
-bottom composer while keeping a distinct TUI-Hire identity.
-"""
+"""TUI-Hire welcome workspace with dashboard navigation and a command composer."""
 
 from __future__ import annotations
 
