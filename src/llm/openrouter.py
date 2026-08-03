@@ -80,16 +80,38 @@ class OpenRouterClient:
             for url in video_urls
         )
 
-        completion = self._client.chat.completions.create(
-            extra_headers=self._headers(),
-            extra_body={
+        return self.chat([{"role": "user", "content": content}])
+
+    def chat(
+        self,
+        messages: list[dict[str, Any]],
+        *,
+        json_mode: bool = False,
+        model: str | None = None,
+        use_configured_provider: bool = True,
+    ) -> str:
+        """Return one chat response, optionally requiring a JSON object."""
+        if not messages:
+            raise ValueError("At least one chat message is required")
+        selected_model = (model or self.model).strip()
+        if not selected_model:
+            raise ValueError("The OpenRouter model cannot be empty")
+        request: dict[str, Any] = {
+            "extra_headers": self._headers(),
+            "model": selected_model,
+            "messages": messages,
+        }
+        if use_configured_provider:
+            request["extra_body"] = {
                 "provider": {
                     "only": [self.provider],
                     "allow_fallbacks": self.allow_fallbacks,
                 }
-            },
-            model=self.model,
-            messages=[{"role": "user", "content": content}],
+            }
+        if json_mode:
+            request["response_format"] = {"type": "json_object"}
+        completion = self._client.chat.completions.create(
+            **request,
         )
         if not completion.choices:
             raise LLMResponseError("OpenRouter returned no completion choices")

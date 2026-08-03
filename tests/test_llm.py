@@ -127,3 +127,38 @@ def test_openrouter_key_is_masked_in_settings(tmp_path) -> None:
     settings = Settings(data_dir=tmp_path, openrouter_api_key="very-secret-key")
 
     assert "very-secret-key" not in repr(settings)
+
+
+def test_openrouter_json_chat_requests_json_object(tmp_path) -> None:
+    fake = FakeOpenAI('{"ok":true}')
+    provider = OpenRouterClient(
+        Settings(data_dir=tmp_path, openrouter_api_key="test-key"),
+        client=fake,
+    )
+
+    result = provider.chat(
+        [{"role": "user", "content": "Return JSON"}],
+        json_mode=True,
+    )
+
+    assert result == '{"ok":true}'
+    assert fake.completions.calls[0]["response_format"] == {"type": "json_object"}
+
+
+def test_openrouter_chat_can_override_model_and_use_automatic_routing(tmp_path) -> None:
+    fake = FakeOpenAI('{"ok":true}')
+    provider = OpenRouterClient(
+        Settings(data_dir=tmp_path, openrouter_api_key="test-key"),
+        client=fake,
+    )
+
+    provider.chat(
+        [{"role": "user", "content": "Return JSON"}],
+        json_mode=True,
+        model="deepseek/deepseek-v4-flash",
+        use_configured_provider=False,
+    )
+
+    request = fake.completions.calls[0]
+    assert request["model"] == "deepseek/deepseek-v4-flash"
+    assert "extra_body" not in request

@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     openrouter_http_referer: str | None = None
     openrouter_app_title: str | None = "Terminal-Hire"
     openrouter_timeout_seconds: float = 60.0
+    onboarding_ai_enabled: bool = True
+    onboarding_ai_model: str = "deepseek/deepseek-v4-flash"
+    onboarding_ai_max_review_rounds: int = 3
     application_dry_run: bool = True
     application_submission_enabled: bool = False
     playwright_headless: bool = False

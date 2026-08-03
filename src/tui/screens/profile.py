@@ -47,12 +47,13 @@ class ProfileScreen(AppScreen):
                 with Vertical(classes="panel"):
                     yield Static("Edit a field", classes="panel-title")
                     yield Input(
-                        placeholder="Path, e.g. identity.full_name or sensitive_identity.ssn",
+                        placeholder="Path, e.g. identity.full_name or contact.linkedin",
                         id="profile-field-path",
                     )
                     yield Input(placeholder="Value", id="profile-field-value")
                     yield Static(
-                        "Lists use | between items. Changes are saved atomically.",
+                        "Lists use | between items. Sensitive identity values stay local "
+                        "and are never sent to AI.",
                         classes="muted",
                     )
                     yield Button("Save verified field", variant="primary", id="btn-save-field")
