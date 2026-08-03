@@ -1,6 +1,6 @@
 # Terminal-Hire — Documentation
 
-Active product and implementation documentation for **TUI-Hire / Terminal-Hire**, a local Python TUI for audited US job applications.
+Product, architecture, flow, and code-backed status documentation for **TUI-Hire / Terminal-Hire**, a local Python TUI prototype for supervised US job applications.
 
 ## Naming
 
@@ -17,11 +17,12 @@ Active product and implementation documentation for **TUI-Hire / Terminal-Hire**
 
 | Doc | Role |
 |---|---|
+| [`IMPLEMENTATION_STATUS.md`](./IMPLEMENTATION_STATUS.md) | **Current code truth** — implemented, standalone, planned, risks, configuration, and test coverage |
 | [`FLOW.md`](./FLOW.md) | Current onboarding, retrieval, browser, review, and submit flow |
 | [`SYSTEM_ARCHITECTURE.md`](./SYSTEM_ARCHITECTURE.md) | **Active build blueprint** — modules, TUI, LLM switch, milestones M0–M8 |
 | [`PROJECT.md`](./PROJECT.md) | Full product/requirements plan — US scope, packs, data model, safety, MVP vs future |
 
-If docs disagree on **stack or MVP order**, `SYSTEM_ARCHITECTURE.md` wins until both are updated together.
+If docs disagree about **current behavior**, `IMPLEMENTATION_STATUS.md` wins. If they disagree on **target stack or MVP order**, `SYSTEM_ARCHITECTURE.md` wins until reconciled.
 
 Root summary: [`../README.md`](../README.md)  
 Config template: [`../.env.example`](../.env.example)
@@ -36,6 +37,11 @@ Config template: [`../.env.example`](../.env.example)
 
 ## Status
 
-- **Phase:** implementation (aligned 2026-07-27)
-- **Implemented foundation:** PROFILE.md, onboarding/profile UI, SQLite audit, browser worker, review, one-use submit gate
-- **Next:** synthetic browser fixtures, LLM adapter, non-sensitive local RAG, ATS hardening, document build
+- **Phase:** prototype implementation (audited 2026-08-02 at `f4176c7`)
+- **Passing baseline:** 43 tests
+- **Implemented foundation:** PROFILE.md, locally validated and OpenRouter-assisted private onboarding, profile UI, SQLite audit, generic browser worker, audit preview, one-use submit claim
+- **Integrated LLM scope:** OpenRouter onboarding and Settings health check only; Apply/form mapping remains deterministic
+- **Not integrated:** LLM-driven onboarding/mapping, LM Studio, vector RAG
+- **Highest priority:** submit-time freshness/blocker/URL checks, lifecycle enforcement, synthetic browser coverage, and restart recovery
+
+Private onboarding was merged by PR #11 before this documentation branch was finalized. The audit branch is rebased onto that updated `main`.
