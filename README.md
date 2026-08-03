@@ -15,7 +15,7 @@ Supervised submit is implemented but **off by default**.
 | SQLite credentials / application audit | Implemented |
 | Playwright inventory/fill/checkpoints | Foundation implemented |
 | Supervised submit | Implemented; opt-in and one-use |
-| OpenRouter Qwen provider | Implemented for text, image, and video URL input |
+| OpenRouter models | Qwen multimodal plus DeepSeek text onboarding/review |
 | Agent / vector RAG | Planned; deterministic local retrieval works now |
 
 ## Quick start
@@ -129,11 +129,16 @@ OPENROUTER_API_KEY=  # add your key only in the untracked .env file
 OPENROUTER_MODEL=qwen/qwen3.6-35b-a3b
 OPENROUTER_PROVIDER=venice
 OPENROUTER_ALLOW_FALLBACKS=false
+ONBOARDING_AI_ENABLED=true
+ONBOARDING_AI_MODEL=deepseek/deepseek-v4-flash
 ```
 
-The OpenRouter adapter accepts explicit text, public image URLs, public video URLs,
-or image/video data URLs. Requests are pinned to Venice without provider fallback.
-It never attaches profile data or local files automatically.
+The OpenRouter adapter uses Qwen for explicit text, public image URLs, public video
+URLs, or image/video data URLs. Those requests are pinned to Venice without provider
+fallback. Private onboarding uses the separate text model and automatic OpenRouter
+routing; only field status and redacted professional content are sent to that model.
+Identity, contact, location, authorization, documents, and sensitive identity values
+stay local. The adapter never attaches profile data or local files automatically.
 Use **Settings → Check connection** to make a minimal authenticated model request.
 
 ## Next steps
