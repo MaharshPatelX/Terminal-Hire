@@ -1,18 +1,27 @@
 # Terminal-Hire — Project Plan
 
-Status: active product contract
-Last reviewed: 2026-07-27
-Implementation status: profile/onboarding/audit/apply foundation implemented
+Status: target product/requirements contract
+Last reviewed: 2026-08-02
+Implementation status: prototype foundation; see code-backed audit
 
 **Companion docs**
 
 - [`SYSTEM_ARCHITECTURE.md`](./SYSTEM_ARCHITECTURE.md) — **active build blueprint** (modules, **TUI**, LLM switch, milestones M0–M8). Prefer it for day-to-day implementation detail.
 - [`FLOW.md`](./FLOW.md) — **end-to-end TUI + system flows**.
+- [`IMPLEMENTATION_STATUS.md`](./IMPLEMENTATION_STATUS.md) — **current committed code truth**, gaps, risks, configuration, and test coverage.
 - This file — **full product/requirements plan**: US job-apply goals, modular work-auth packs, data model, workflows, safety, testing, MVP vs future.
 - [`README.md`](./README.md) — docs index.
 - [`../README.md`](../README.md) — short project summary.
 
-If the two docs ever disagree on **stack or MVP order**, `SYSTEM_ARCHITECTURE.md` wins until both are updated together.
+If docs disagree on current behavior, `IMPLEMENTATION_STATUS.md` wins. For target stack or MVP order, `SYSTEM_ARCHITECTURE.md` is the authority until reconciled.
+
+---
+
+## 0. Current snapshot versus this contract
+
+This file intentionally describes the desired product, including requirements that do not exist yet. At merge commit `f4176c7`, the strict profile, locally validated/private-AI onboarding, deterministic Apply retrieval, SQLite audit, generic Playwright worker, audit preview, and one-use submit claim exist as a tested foundation. OpenRouter powers onboarding and the Settings health check; the full suite passes 43 tests.
+
+The following contract areas remain incomplete: exhaustive onboarding free-text privacy controls and explicit cloud-routing UX, real pack schemas, LM Studio, Apply agent runtime, vector RAG, ATS adapters, document build/hashing, browser restart recovery, retention/limits/metrics, enforced status transitions, and production-grade submit-time profile/live-page/blocker/URL checks. Supervised Submit should stay disabled outside controlled development fixtures.
 
 ---
 
@@ -402,7 +411,7 @@ ready_to_apply -> applying -> waiting_for_user_answer -> applying
                          \ -> cancelled
 ```
 
-Every transition is validated and written to `application_status_history` with timestamp, actor, correlation ID, and reason. `submitted` does not return to `applying`.
+Target requirement: every transition is validated and written to `application_status_history` with timestamp, actor, correlation ID, and reason, and `submitted` never returns to `applying`. Current code stores a status string directly on `applications`, accepts free-form transitions, and has no status-history table.
 
 ### 8.3 Supervised submission gates
 
@@ -573,6 +582,8 @@ Operational targets: zero duplicate submits, zero invented sensitive answers, co
 
 ## 15. Testing strategy
 
+This section is the target strategy. The current 43-test baseline covers profile storage/retrieval, SQLite redaction and submit-gate invariants, one generic browser form plus ambiguous Submit controls, OpenRouter/onboarding request behavior, structured onboarding validation, safe-projection checks, AI path allowlisting/model routing, focus, invalid-ZIP persistence, and basic TUI routing. Multi-step auth, OTP/CAPTCHA/consent fixtures, restart recovery, live-page preview integrity, real provider connectivity, and ATS compatibility are not covered.
+
 ### 15.1 Unit
 
 - PROFILE.md parse/validation/recovery, deterministic and Q&A retrieval, state transitions, and submission-gate invariants.
@@ -608,7 +619,7 @@ Operational targets: zero duplicate submits, zero invented sensitive answers, co
 ### 16.1 Local development (MVP)
 
 - Python 3.11+ venv / uv; Playwright browsers installed locally.
-- LM Studio running when `LLM_PROVIDER=lmstudio`; OpenRouter key when using cloud.
+- Target: LM Studio running when `LLM_PROVIDER=lmstudio`; OpenRouter key when using cloud. Current code supports only the OpenRouter health check and standalone client.
 - OS-local app-data directory with `PROFILE.md`, SQLite, and artifacts; no Docker required.
 - Synthetic profile/fixtures only in tests.
 
@@ -627,11 +638,11 @@ Aligned with `SYSTEM_ARCHITECTURE.md` (canonical numbering M0–M8):
 | Milestone | Focus | Exit |
 |---|---|---|
 | **M0** | Python/Textual shell and local-data decisions | Implemented |
-| **M1** | Strict `PROFILE.md`, parser/recovery/retrieval, first-run onboarding, profile editor | Implemented foundation |
-| **M2** | SQLite credentials/audit, application orchestration, evidence, one-use submit gate | Implemented foundation |
+| **M1** | Strict `PROFILE.md`, parser/recovery/retrieval, first-run onboarding, profile editor | Implemented foundation with private-AI validation/review |
+| **M2** | SQLite credentials/audit, application orchestration, evidence, one-use submit gate | Experimental foundation; P0 submit checks remain |
 | **M3** | LaTeX → PDF | Uploadable resume |
 | **M4** | Harden Playwright inventory/fill/login against ATS fixtures | E2E synthetic and selected real pages |
-| **M5** | LM Studio/OpenRouter agent + disposable non-sensitive RAG | Schema-validated minimal context |
+| **M5** | LM Studio/OpenRouter agent + disposable non-sensitive RAG | OpenRouter onboarding only; Apply agent, LM Studio, and index planned |
 | **M6** | OTP/CAPTCHA/consent recovery across browser restarts | Interrupted applies recoverable |
 | **M7** | Harden supervised submit | Security review + synthetic confirmation coverage |
 | **M8** | ATS collectors, matching, email OTP, UI, scale-out | As needed |
@@ -643,6 +654,8 @@ Older TS/Postgres/dashboard-first milestones are **withdrawn** as the MVP path.
 ## 18. MVP versus future scope
 
 ### MVP
+
+Target MVP scope, not a list of completed features:
 
 - Single user, one verified Markdown profile (TUI onboard).
 - SQLite application audit + plaintext site credentials; optional disposable local index.
@@ -662,14 +675,15 @@ Older TS/Postgres/dashboard-first milestones are **withdrawn** as the MVP path.
 
 ## 19. What should be built first
 
-1. Harden the implemented `PROFILE.md`, onboarding, retrieval, and SQLite audit foundation.
-2. Add synthetic Playwright pages for login, account creation, OTP, form fill, and submit confirmation.
-3. Implement the OpenAI-compatible agent with minimal non-sensitive context.
-4. Add a disposable local RAG index for professional narrative and portal Q&A.
-5. Add LaTeX/PDF document build and hashing.
-6. Harden browser restart recovery and ATS-specific selectors.
+1. Add submit-time profile/live-page/blocker/URL validation, legal status transitions, and daily limits.
+2. Expand synthetic Playwright pages for login, account creation, OTP, CAPTCHA, consent, multi-step fill, redirects, validation, and confirmation.
+3. Add browser restart recovery and canonical current-field reconciliation.
+4. Strengthen onboarding free-text redaction/cloud-consent UX and integrate a schema-validated mapper.
+5. Decide whether LM Studio and vector RAG remain MVP requirements; implement only if retained.
+6. Add real pack schemas plus LaTeX/PDF document validation, build, and hashing.
+7. Harden ATS-specific selectors only after the safety and recovery gates are proven.
 
-This matches URL-first product intent while keeping browser automation behind a working profile/LLM spine.
+This keeps the URL-first product intent while putting submit integrity and browser recovery ahead of expansion work.
 
 ---
 
@@ -677,14 +691,14 @@ This matches URL-first product intent while keeping browser automation behind a 
 
 | Decision | Options | Recommendation for now |
 |---|---|---|
-| Default `LLM_PROVIDER` | lmstudio; openrouter; off | `lmstudio` for private onboard; OpenRouter when local quality is weak |
+| Default `LLM_PROVIDER` | lmstudio; openrouter; off | Currently `lmstudio`, although its adapter is absent; reconsider `off` until integrated |
 | LM Studio model | user-loaded id | Prefer a model decent at JSON / tools |
 | OpenRouter model | catalog slug | Start with a mid-cost strong JSON model; pin id |
 | Embeddings | LM Studio; fastembed local; OpenRouter | **Local** (`fastembed` or LM Studio) even if chat is OpenRouter |
 | Package/tooling | uv; poetry; pip | `uv` or plain `pyproject.toml` + pip |
 | ORM | SQLModel; SQLAlchemy; raw SQL | Raw `sqlite3` currently implemented |
 | LaTeX engine | tectonic; MiKTeX; TeX Live | Whatever is installed; document in README |
-| Vector DB | Chroma; LanceDB; none until M5 | Chroma after onboard works; optional until mapper needs it |
+| Vector DB | Chroma; LanceDB; none until M5 | None currently; add only if lexical retrieval is insufficient |
 | Submission consent | Per-job; allowlist autopilot | Per-job approve for first live release |
 | Browser profile | Persistent; ephemeral | Ephemeral session + SQLite checkpoints currently |
 | Notifications | TUI only; email; desktop | TUI first |

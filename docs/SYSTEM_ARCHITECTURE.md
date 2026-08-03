@@ -1,22 +1,23 @@
 # Terminal-Hire — System Architecture (Python + Local LLM)
 
-Status: active implementation blueprint
+Status: target implementation blueprint; current code status is tracked separately
 Language: **Python only**  
-LLM: **LM Studio (local)** and/or **OpenRouter** — both via **OpenAI-compatible API**, switchable  
-Agent runtime: **project-owned Python services** with explicit tools and permission gates
-Last updated: 2026-07-27
+Target LLM: **LM Studio (local)** and/or **OpenRouter**, switchable through an OpenAI-compatible interface
+Target agent runtime: **project-owned Python services** with explicit tools and permission gates
+Last updated: 2026-08-02
 
 This document is the **active build blueprint** (modules, **TUI**, LLM switch, M0–M8).  
 [`PROJECT.md`](./PROJECT.md) is the aligned **full product/requirements plan** (US scope, profile packs, data model, safety, MVP vs future).  
 [`FLOW.md`](./FLOW.md) is the **end-to-end TUI + system flow map**.  
+[`IMPLEMENTATION_STATUS.md`](./IMPLEMENTATION_STATUS.md) is the **code-backed current-state and gap audit**.
 Docs index: [`README.md`](./README.md). Root summary: [`../README.md`](../README.md).  
-If docs disagree on stack or MVP order, update both — this file wins for implementation detail until reconciled.
+If docs disagree on current behavior, `IMPLEMENTATION_STATUS.md` wins. This file wins for target stack and milestone order.
 
 ---
 
 ## 1. Product in one sentence
 
-**Terminal-Hire** is a local Python **TUI** for **US job applications**: interviews you, stores verified facts + a LaTeX resume (plus **optional work-auth packs** like citizen / OPT / STEM OPT only if you enable them), then takes a US career-page URL and uses a supervised Python agent runtime with **LM Studio or OpenRouter**, plus Playwright, to fill applications safely (preview first; submit only when allowed).
+**Terminal-Hire** aims to be a local Python **TUI** for **supervised US job applications**: it stores verified facts and documents, takes a career-page URL, fills through Playwright, and requires review before an optional one-use Submit click. Agentic mapping, dual-provider inference, full pack behavior, and LaTeX resume generation are target capabilities, not current ones.
 
 ---
 
@@ -38,6 +39,8 @@ If docs disagree on stack or MVP order, update both — this file wins for imple
 ---
 
 ## 3. High-level architecture
+
+Target architecture. The general Apply agent and dual-provider blocks are planned; the TUI, deterministic services, SQLite store, OpenRouter health check/private onboarding, and generic Playwright worker exist today. Apply/form-mapping inference is not implemented.
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
@@ -77,7 +80,7 @@ Full screen-by-screen flows: [`FLOW.md`](./FLOW.md).
 
 ### 3.1 Project-owned agent runtime
 
-The runtime is implemented directly in Python with narrow responsibilities and explicit safety boundaries:
+This is the target runtime. None of the `agent/` modules below exist in the audited baseline:
 
 | Capability | Python implementation |
 |---|---|
@@ -90,7 +93,7 @@ The runtime is implemented directly in Python with narrow responsibilities and e
 
 ### 3.2 Dual providers: LM Studio ↔ OpenRouter (same OpenAI client)
 
-Both speak OpenAI-compatible chat completions. Python uses **one** `OpenAI` client factory; only `base_url`, `api_key`, and `model` change.
+This is the target provider design. Current code has an OpenRouter client, Settings health check, JSON chat, a separate DeepSeek model, and OpenRouter automatic provider routing for onboarding. There is still no shared provider factory, LM Studio adapter, or Apply/form-mapping integration.
 
 | Provider | When to use | Base URL | Key |
 |---|---|---|---|
@@ -102,8 +105,10 @@ Both speak OpenAI-compatible chat completions. Python uses **one** `OpenAI` clie
 
 - Exactly **one active chat provider** at a time (`LLM_PROVIDER`).
 - You can keep **both configs filled** in `.env` and flip the switch without rewriting code.
-- TUI Settings / health panel reports which provider is active and whether the OpenAI-compatible endpoint responds.
+- TUI Settings shows the provider in memory. Only OpenRouter has a working health check; changing the provider is not persisted.
 - Optional later: `--provider` override for scripted runs that call the same services.
+
+Proposed factory shape (not current code):
 
 ```python
 from openai import OpenAI
@@ -150,6 +155,8 @@ def make_llm_client(settings) -> OpenAI | None:
 
 ### Phase A — First-time setup
 
+Target flow:
+
 ```text
 terminal-hire                    # missing/incomplete PROFILE.md → Onboard
 
@@ -164,6 +171,8 @@ Returning launch → Profile | Apply | Applications | Settings
 
 See `PROJECT.md` §3.1 for pack list. STEM OPT caution applies only if that pack is on.
 OTP on career sites = one-time code (core apply) — not the same as OPT.
+
+Current onboarding uses staged local validation, local review, optional AI phrasing/redacted professional review, and local fallback. It does not collect SSN/passport/license data. Pack flags are still selected later in Profile and do not trigger pack-specific questions or mapping gates.
 
 ### Phase B — Apply from career URL
 
@@ -236,11 +245,13 @@ Strict YAML front matter is machine-authoritative; the Markdown body is a readab
 | `artifacts` | Redacted screenshot/evidence paths |
 | `submit_approvals` | Preview-bound one-use approval |
 
-Statuses include `ready_to_apply`, `applying`, `waiting_for_user_answer`, `waiting_for_otp`, `blocked_by_captcha`, `waiting_for_user_review`, `approved`, `submitting`, `submitted`, `submission_uncertain`, and `cancelled`.
+Observed statuses include `ready_to_apply`, `applying`, `waiting_for_credential`, `waiting_for_user_answer`, `waiting_for_otp`, `waiting_for_consent`, `blocked_by_captcha`, `waiting_for_user_review`, `approved`, `submitting`, `submitted`, `submission_uncertain`, and `cancelled`. They are currently free-form strings; transition validation and a dedicated status-history table are planned.
 
 ---
 
 ## 7. Agent runtime design
+
+This entire section is planned. Current retrieval is deterministic/lexical and asks the user when it cannot resolve a field.
 
 ### 7.1 Loop (simplified)
 
@@ -289,16 +300,20 @@ Invalid JSON → reject; do not fill.
 
 Best-effort, not magic:
 
-1. Detect known ATS when possible  
-2. Else generic DOM field inventory  
+1. Generic DOM field inventory is implemented
+2. Known-ATS detection and adapters are planned
 3. Saved credentials fill login/account fields; consent and CAPTCHA pause
 4. Resume/document path comes from PROFILE.md
 5. OTP pauses for TUI entry and is never persisted
-6. Every fill/click records an event, redacted screenshot, and checkpoint
+6. Filled fields record an event and redacted screenshot; checkpoints exist for open/inventory, not every fill
+
+Browser contexts are ephemeral and checkpoints are not loaded for restart recovery.
 
 ---
 
 ## 9. RAG (local)
+
+Planned. `ProfileRetriever.safe_context` currently ranks non-sensitive chunks lexically, but no workflow consumes those chunks and no vector index exists.
 
 - Index only non-sensitive verified professional chunks and portal Q&A
 - The index is disposable and rebuilt from PROFILE.md
@@ -307,6 +322,8 @@ Best-effort, not magic:
 ---
 
 ## 10. Safety gates
+
+Target gates:
 
 1. Submission setting explicitly enabled
 2. Required fields from verified profile data or explicit user answers only
@@ -317,6 +334,8 @@ Best-effort, not magic:
 7. URL still matches; ambiguous result is never retried
 
 No CAPTCHA bypass. Password/OTP/sensitive identity values are redacted from logs and screenshots.
+
+Current submit code enforces the enable switch, stored preview approval, one-use claim, active session, and exactly one Submit control. It does **not** yet revalidate current profile hash, live DOM/required fields, blockers, or current URL/domain immediately before click. See the P0 audit findings before enabling Submit.
 
 ---
 
@@ -339,50 +358,49 @@ Optional later: scripted service calls for automation — not required for MVP.
 
 ## 12. Config (`.env` sketch)
 
+Only settings loaded by the committed `Settings` model are shown here. Roadmap knobs must not be treated as active until code loads and enforces them.
+
 ```text
 APPLICATION_DRY_RUN=true
 APPLICATION_SUBMISSION_ENABLED=false
-APPLICATION_DAILY_LIMIT=5
 
 # Defaults outside repository/OneDrive:
 # DATA_DIR=C:\Users\you\AppData\Local\TUI-Hire
 PROFILE_FILENAME=PROFILE.md
 DATABASE_FILENAME=terminal_hire.sqlite
 ARTIFACT_DIRNAME=artifacts
+APP_TIMEZONE=America/Chicago
 
 # Which brain is on: lmstudio | openrouter | off
 LLM_PROVIDER=lmstudio
 
-# --- LM Studio (local OpenAI-compatible) ---
-LMSTUDIO_ENABLED=true
-LMSTUDIO_BASE_URL=http://localhost:1234/v1
-LMSTUDIO_API_KEY=lm-studio
-LMSTUDIO_MODEL=local-model-id-from-lm-studio
-# Optional local embeddings via LM Studio
-LMSTUDIO_EMBEDDING_MODEL=
-
 # --- OpenRouter (cloud OpenAI-compatible) ---
-OPENROUTER_ENABLED=true
 OPENROUTER_API_KEY=
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
-OPENROUTER_MODEL=openai/gpt-4.1-mini
-OPENROUTER_HTTP_REFERER=http://localhost
+OPENROUTER_MODEL=qwen/qwen3.6-35b-a3b
+OPENROUTER_PROVIDER=venice
+OPENROUTER_ALLOW_FALLBACKS=false
+OPENROUTER_HTTP_REFERER=https://github.com/MaharshPatelX/Terminal-Hire
 OPENROUTER_APP_TITLE=Terminal-Hire
+OPENROUTER_TIMEOUT_SECONDS=60
 
-# Shared LLM behavior
-LLM_JSON_PLAN_FALLBACK=true
-LLM_TEMPERATURE=0.2
-LLM_MAX_TURNS=20
+# Private onboarding:
+ONBOARDING_AI_ENABLED=true
+ONBOARDING_AI_MODEL=deepseek/deepseek-v4-flash
+ONBOARDING_AI_MAX_REVIEW_ROUNDS=3
 
 PLAYWRIGHT_HEADLESS=false
-EMAIL_OTP_ENABLED=false
 ```
 
 **How on/off works:**
 
-- `LLM_PROVIDER` selects the active chat backend (`lmstudio`, `openrouter`, or `off`).
-- `LMSTUDIO_ENABLED` / `OPENROUTER_ENABLED` are soft gates: if you set `LLM_PROVIDER=openrouter` but `OPENROUTER_ENABLED=false` (or missing key), startup/`llm-check` fails clearly instead of silently calling the wrong host.
-- Both can stay `ENABLED=true` with keys/URLs filled; you only flip `LLM_PROVIDER` (or use the CLI helper) to switch.
+- `LLM_PROVIDER` accepts `lmstudio`, `openrouter`, or `off`, but only the OpenRouter Settings health check is implemented.
+- OpenRouter is validated when its client is constructed, not at application startup.
+- The Settings provider choice is in-memory only. The supervised-submit switch is persisted in SQLite.
+- `APPLICATION_DRY_RUN` is loaded but does not currently control the browser or submit gate.
+- Private onboarding sends field-status metadata and pattern-redacted professional text through OpenRouter automatic provider routing when enabled; it does not use the configured Venice-only route.
+
+Planned/not loaded: LM Studio settings, daily limits, shared agent tuning, concurrency, email OTP, logging level, and retention settings.
 
 ---
 
@@ -395,8 +413,9 @@ EMAIL_OTP_ENABLED=false
 - Strict model/parser, readable rendering, atomic write, backup recovery, hash
 - Forced first-run onboarding, four-item ready navigation, profile/Q&A editor
 - Deterministic exact and lexical retrieval with sensitive-context exclusion
+- Semantic local validation plus redacted OpenRouter-assisted onboarding
 
-### M2 — SQLite application audit + supervised apply (foundation implemented)
+### M2 — SQLite application audit + supervised apply (experimental foundation)
 
 - Plaintext site credentials by explicit policy, events, field actions, checkpoints, artifacts
 - Playwright login/account/OTP/inventory/fill and screenshot evidence
@@ -406,7 +425,7 @@ EMAIL_OTP_ENABLED=false
 
 ### M4 — Harden Playwright with ATS/synthetic fixtures
 
-### M5 — OpenAI-compatible agent + disposable non-sensitive RAG
+### M5 — OpenAI-compatible agent + disposable non-sensitive RAG (OpenRouter onboarding only)
 
 ### M6 — Browser restart recovery + ATS adapters
 
@@ -418,22 +437,24 @@ EMAIL_OTP_ENABLED=false
 
 ## 14. Build first this week
 
-1. Synthetic browser fixtures for login, account creation, OTP, form fill, and submit
-2. OpenAI client factory → LM Studio and OpenRouter
-3. Minimal-context agent mapper + local non-sensitive index
-4. LaTeX/PDF document build and hashing
+1. Add submit-time profile/live-page/blocker/URL checks, status transitions, and daily limits
+2. Expand synthetic browser fixtures and add restart recovery
+3. Strengthen onboarding free-text redaction/cloud-consent UX, then integrate a schema-validated mapper
+4. Decide whether LM Studio and vector retrieval are still required; implement them if retained
+5. Add real pack schemas plus LaTeX/PDF document validation, build, and hashing
 
 ---
 
 ## 15. Relationship to `PROJECT.md`
 
-All docs are aligned (2026-07-27):
+All docs were reconciled on 2026-08-02. Current-state detail lives in `IMPLEMENTATION_STATUS.md`:
 
 | Doc | Role |
 |---|---|
 | `SYSTEM_ARCHITECTURE.md` | Build blueprint: packages, **TUI**, LLM switch, M0–M8 |
 | `FLOW.md` | End-to-end TUI + apply flows |
 | `PROJECT.md` | Full requirements: US scope, profile packs, data model, safety, MVP vs future |
+| `IMPLEMENTATION_STATUS.md` | Code-backed status, risks, configuration truth, and test coverage |
 
 Shared decisions: Python, URL-first flow, PROFILE.md truth, SQLite application audit, plaintext local credentials, deterministic-before-RAG retrieval, supervised one-use submit, and OTP/CAPTCHA/consent pauses.
 
@@ -441,8 +462,8 @@ Shared decisions: Python, URL-first flow, PROFILE.md truth, SQLite application a
 
 ## 16. Open decisions
 
-1. Default `LLM_PROVIDER`: `lmstudio` or `openrouter`?  
-2. LM Studio chat model id? OpenRouter model slug?  
+1. Keep `lmstudio` as the default before its adapter exists, or default to `off`?
+2. Retain LM Studio in MVP? If yes, which chat model id?
 3. Embeddings: LM Studio vs `fastembed`?  
 4. Default work-auth packs at onboard (usually none until user picks)?  
 5. LaTeX engine on your PC?  
@@ -458,4 +479,9 @@ Shared decisions: Python, URL-first flow, PROFILE.md truth, SQLite application a
 - SQLite application/credential/audit storage
 - Playwright worker with redacted evidence and human blockers
 - Preview-bound, one-use supervised-submit gate
-- Automated profile, storage, submit-gate, and TUI routing tests
+- Standalone OpenRouter client plus Settings connection check
+- 28 automated profile, storage, browser, LLM-client, submit-gate, and TUI routing tests
+
+Private onboarding is merged in the audited base. The full suite has 43 passing tests.
+
+This foundation is not a production-readiness statement. See `IMPLEMENTATION_STATUS.md` for missing submit-time checks and test gaps.
